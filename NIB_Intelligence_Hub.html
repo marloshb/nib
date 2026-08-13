@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NIB Intelligence Hub — Plataforma Operacional e de Inteligência da Nova Indústria Brasil</title>
+<link rel="stylesheet" href="https://js.arcgis.com/5.1/esri/themes/light/main.css">
+<script type="module" src="https://js.arcgis.com/5.1/"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -202,7 +204,7 @@ table.tbl tbody tr.sel{background:var(--tech-soft);box-shadow:inset 2px 0 0 var(
 .logbox::-webkit-scrollbar-thumb{background:#23405D;background-clip:content-box}
 
 /* map */
-.map-slot{position:relative;background:var(--surface3);min-height:260px;overflow:hidden;isolation:isolate;contain:paint}
+.map-slot{position:relative;background:var(--surface3);min-height:260px;overflow:hidden;isolation:isolate}
 #geoHost{position:absolute;inset:0;display:none}
 .map-overlay{position:absolute;z-index:5;pointer-events:none}
 .map-legend{left:10px;bottom:10px;max-height:calc(100% - 20px);overflow:auto;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;box-shadow:var(--sh);pointer-events:auto;max-width:210px}
@@ -1141,79 +1143,135 @@ const bus = {
 };
 
 /* ============================================================
-   MOTOR GEOESPACIAL — ArcGIS Maps SDK for JavaScript 4.31
-   Uma única instância de MapView é reposicionada entre módulos:
-   a geografia é a camada integradora de toda a plataforma.
+   MOTOR GEOESPACIAL — ArcGIS Maps SDK for JavaScript 5.1 (ESM)
+   Uma única MapView é reposicionada entre módulos: a geografia
+   é a camada integradora de toda a plataforma.
+   Todos os serviços são públicos e dispensam chave de API.
    ============================================================ */
+const ARCGIS_ONLINE = 'https://services.arcgisonline.com/ArcGIS/rest/services/';
+const LIVING_ATLAS = 'https://services.arcgis.com/P3ePLMYs2RvChkJx/arcgis/rest/services/';
+
 const GEO = {
   ready:false, view:null, map:null, layers:{}, mods:null, host:null, pulseTimer:null,
-  failed:false, mode:'loading', diag:[], basemapId:'gray', diag_img:false, sources:[
-    {n:'js.arcgis.com · 4.31', js:'https://js.arcgis.com/4.31/', css:'https://js.arcgis.com/4.31/esri/themes/light/main.css'},
-    {n:'js.arcgis.com · 4.30', js:'https://js.arcgis.com/4.30/', css:'https://js.arcgis.com/4.30/esri/themes/light/main.css'},
-    {n:'js.arcgis.com · 4.29', js:'https://js.arcgis.com/4.29/', css:'https://js.arcgis.com/4.29/esri/themes/light/main.css'}
-  ],
+  mode:'loading', basemapId:'gray', _recreated:false,
+
+  /* Basemaps abertos — serviços públicos, sem chave nem créditos */
+  BASEMAPS:{
+    gray:{n:'Esri · World Light Gray Canvas', url:ARCGIS_ONLINE+'Canvas/World_Light_Gray_Base/MapServer',
+          ref:ARCGIS_ONLINE+'Canvas/World_Light_Gray_Reference/MapServer'},
+    topo:{n:'Esri · World Topographic', url:ARCGIS_ONLINE+'World_Topo_Map/MapServer'},
+    imagery:{n:'Esri · World Imagery', url:ARCGIS_ONLINE+'World_Imagery/MapServer',
+             ref:ARCGIS_ONLINE+'Reference/World_Boundaries_and_Places/MapServer'},
+    street:{n:'Esri · World Street Map', url:ARCGIS_ONLINE+'World_Street_Map/MapServer'},
+    physical:{n:'Esri · World Physical Map', url:ARCGIS_ONLINE+'World_Physical_Map/MapServer'},
+    osm:{n:'OpenStreetMap', osm:true}
+  },
+
+  MODULES:['@arcgis/core/config.js','@arcgis/core/Map.js','@arcgis/core/Basemap.js',
+    '@arcgis/core/views/MapView.js','@arcgis/core/layers/FeatureLayer.js',
+    '@arcgis/core/layers/GraphicsLayer.js','@arcgis/core/layers/TileLayer.js','@arcgis/core/Graphic.js'],
+
   init(){
     this.host = document.getElementById('geoHost');
-    this.diag=[]; this.mode='loading';
-    clearTimeout(this._deadline);
-    this._deadline = setTimeout(()=>{ if(this.mode==='loading') this.fallback('Tempo total excedido sem resposta do serviço'); }, 26000);
-    if(this.host) this.host.innerHTML=`<div data-geo-placeholder style="position:absolute;inset:0;display:grid;place-items:center;background:#DEE7EF">
-      <div style="text-align:center;font-family:var(--ff-d);font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#5A6B80">
-        <div style="width:26px;height:26px;margin:0 auto 8px;border:2px solid #B9CCDD;border-top-color:#176B9A;border-radius:50%;animation:spin 1s linear infinite"></div>
-        Conectando ao serviço geoespacial</div></div>`;
-    this.tryLoad(0);
+    this.note('Carregando ArcGIS Maps SDK 5.1…');
+    this.load().then(m=>{
+      this.mods={esriConfig:m[0],Map:m[1],Basemap:m[2],MapView:m[3],FeatureLayer:m[4],
+                 GraphicsLayer:m[5],TileLayer:m[6],Graphic:m[7]};
+      this.build();
+    }).catch(err=>{
+      this.mode='error';
+      this.note('Serviço geoespacial indisponível neste ambiente — <span class="mono">js.arcgis.com</span> não pôde ser carregado. Os demais módulos da plataforma seguem operando.');
+      console.warn('ArcGIS SDK:',err);
+      bus.emit('geo:ready');
+    });
   },
-  tryLoad(i){
-    if(typeof require !== 'undefined' && require.toUrl){ this.diag.push('loader AMD já presente'); this.loadModules(); return; }
-    if(i>=this.sources.length){ this.fallback('Nenhuma origem do ArcGIS Maps SDK pôde ser carregada neste ambiente'); return; }
-    const s=this.sources[i], t0=Date.now();
-    this.diag.push(`${s.n}: solicitando…`);
-    const css=document.createElement('link'); css.rel='stylesheet'; css.href=s.css; document.head.appendChild(css);
-    const sc=document.createElement('script'); sc.src=s.js; sc.async=true;
-    let done=false;
-    const finish=(okMsg,next)=>{ if(done) return; done=true; clearTimeout(to);
-      this.diag[this.diag.length-1]=`${s.n}: ${okMsg} (${Date.now()-t0} ms)`;
-      if(next) this.tryLoad(i+1); else this.loadModules(); };
-    const to=setTimeout(()=>finish('sem resposta — provável bloqueio de conteúdo',true), i===0?5000:3500);
-    sc.onload=()=>{ if(typeof require==='undefined') finish('carregado sem loader AMD',true); else finish('carregado',false); };
-    sc.onerror=()=>finish('bloqueado pelo ambiente ou indisponível',true);
-    document.head.appendChild(sc);
+  /* a 5.x é ESM e distribuída por um único CDN: os módulos vêm do
+     carregador global $arcgis, publicado por js.arcgis.com/5.1/ */
+  load(){
+    const need=this.MODULES;
+    return new Promise((res,rej)=>{
+      let n=0, reinjected=false;
+      const t=setInterval(()=>{
+        if(window.$arcgis && window.$arcgis.import){
+          clearInterval(t);
+          Promise.resolve(window.$arcgis.import(need)).then(res,rej);
+          return;
+        }
+        n++;
+        // o <script type="module"> do head pode não ter sido executado:
+        // uma reinjeção resolve casos de ordem de carregamento
+        if(n===60 && !reinjected){
+          reinjected=true;
+          const s=document.createElement('script');
+          s.type='module'; s.src='https://js.arcgis.com/5.1/';
+          document.head.appendChild(s);
+        }
+        if(n>150){ clearInterval(t); rej(new Error('carregador $arcgis nao disponivel')); }
+      },100);
+    });
   },
-  loadModules(){
-    const modList = ["esri/config","esri/Map","esri/views/MapView","esri/layers/FeatureLayer","esri/layers/GraphicsLayer",
-      "esri/Graphic","esri/geometry/Point","esri/geometry/Polyline","esri/geometry/Extent",
-      "esri/Basemap","esri/layers/TileLayer"];
-    let done=false;
-    const guard = setTimeout(()=>{ if(!done) this.fallback('Tempo excedido ao resolver os módulos do SDK'); }, 15000);
-    try{
-      require(modList, (esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent,Basemap,TileLayer)=>{
-        done=true; clearTimeout(guard); clearTimeout(this._deadline);
-        this.mods={esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent,Basemap,TileLayer};
-        this.diag.push('módulos esri resolvidos');
-        try{ this.build(); this.mode='arcgis'; }catch(e){ console.error(e); this.fallback('Falha ao construir as camadas: '+e.message); }
-      }, err=>{ done=true; clearTimeout(guard); this.fallback('Erro ao resolver módulos: '+(err&&err.message||'desconhecido')); });
-    }catch(e){ this.fallback('Erro ao inicializar o SDK: '+e.message); }
+  note(html){
+    if(!this.host) return;
+    this.host.innerHTML=`<div data-geo-note style="position:absolute;inset:0;display:grid;place-items:center;background:#DEE7EF;padding:18px">
+      <div style="text-align:center;max-width:340px;font-size:12px;color:#5A6B80;line-height:1.6">
+        <div style="width:24px;height:24px;margin:0 auto 10px;border:2px solid #B9CCDD;border-top-color:#176B9A;border-radius:50%;animation:spin 1s linear infinite"></div>
+        ${html}</div></div>`;
   },
-  retry(){
-    const prev=this.diag.slice();
-    this.failed=false; this.ready=false; FB.built=false; FB.bound=false; FB.tiles={}; FB.tileOK=false; FB.tileFail=0; FB.tilesOn=true; FB.srcIdx=0;
-    this.init(); this.diag = prev.concat(['— nova tentativa —'], this.diag);
-    toast('info','Reconectando ao ArcGIS','Nova tentativa de carregamento do SDK em andamento.'); },
   sym(color,size,outline){ return {type:'simple-marker',style:'circle',color,size,outline:{color:outline||[255,255,255,.9],width:1}}; },
+  openBasemap(id){
+    const {Basemap,TileLayer}=this.mods, b=this.BASEMAPS[id]||this.BASEMAPS.gray;
+    if(b.osm) return 'osm';
+    const layers=[new TileLayer({url:b.url})];
+    if(b.ref) layers.push(new TileLayer({url:b.ref}));
+    return new Basemap({baseLayers:layers, title:b.n});
+  },
+  setBasemap(id){
+    this.basemapId=id;
+    if(!this.ready) return;
+    try{ this.map.basemap=this.openBasemap(id); }catch(e){ console.warn(e); }
+  },
 
   build(){
-    const {esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent}=this.mods;
-    esriConfig.request.timeout = 20000;
+    const {esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,TileLayer,Graphic}=this.mods;
+    try{ esriConfig.request.timeout = 30000; }catch(e){}
 
-    /* ---- camadas client-side (dados NIB simulados) ---- */
     const mkPoint=(o,attrs)=>({geometry:{type:'point',longitude:o.lng,latitude:o.lat},attributes:attrs});
     const FL=(cfg)=> new FeatureLayer(Object.assign({objectIdField:'oid',outFields:['*'],spatialReference:{wkid:4326}},cfg));
 
-    // Estabelecimentos industriais
+    /* ---------- serviços públicos do ArcGIS Living Atlas ---------- */
+    this.layers.la_hillshade = new TileLayer({
+      id:'la_hillshade', title:'Living Atlas · Relevo sombreado', visible:false, opacity:.55,
+      url:ARCGIS_ONLINE+'Elevation/World_Hillshade/MapServer'
+    });
+    this.layers.la_countries = new FeatureLayer({
+      id:'la_countries', title:'Living Atlas · Países do Mundo', visible:false, opacity:.55,
+      url:LIVING_ATLAS+'World_Countries_Generalized/FeatureServer/0',
+      renderer:{type:'simple',symbol:{type:'simple-fill',color:[23,107,154,.08],outline:{color:[23,107,154,.55],width:.6}}},
+      popupTemplate:{title:'{COUNTRY}',content:'Camada pública do ArcGIS Living Atlas — contexto de dependências externas.'}
+    });
+    this.layers.la_admin = new FeatureLayer({
+      id:'la_admin', title:'Living Atlas · Divisões administrativas', visible:false, opacity:.7,
+      url:LIVING_ATLAS+'World_Administrative_Divisions/FeatureServer/0',
+      renderer:{type:'simple',symbol:{type:'simple-fill',color:[0,0,0,0],outline:{color:[62,87,114,.5],width:.7}}},
+      popupTemplate:{title:'{NAME}',content:'Divisão administrativa — ArcGIS Living Atlas.'}
+    });
+    this.layers.la_cities = new FeatureLayer({
+      id:'la_cities', title:'Living Atlas · Cidades do Mundo', visible:false,
+      url:LIVING_ATLAS+'World_Cities/FeatureServer/0',
+      definitionExpression:"POP_RANK <= 4",
+      renderer:{type:'simple',symbol:this.sym([62,87,114,.75],5,[255,255,255,.9])},
+      popupTemplate:{title:'{CITY_NAME}',content:'{CNTRY_NAME} — classe populacional {POP_RANK}.'}
+    });
+    this.layers.la_transport = new TileLayer({
+      id:'la_transport', title:'Living Atlas · Transportes e rodovias', visible:false,
+      url:ARCGIS_ONLINE+'Reference/World_Transportation/MapServer'
+    });
+
+    /* ---------- camadas NIB (dados simulados, client-side) ---------- */
     this.layers.companies = FL({
       id:'companies', title:'Estabelecimentos industriais (NIB)', geometryType:'point',
-      source: companies.map(c=> new Graphic(mkPoint(c,{oid:c.oid,id:c.id,nome:c.name,uf:c.uf,cadeia:CHAIN_BY[c.chain].name,
-        cap:c.capScore,emp:c.emp,st:CHAIN_BY[c.chain].status}))),
+      source: companies.map(c=> new Graphic(mkPoint(c,{oid:c.oid,id:c.id,nome:c.name,uf:c.uf,
+        cadeia:CHAIN_BY[c.chain].name,cap:c.capScore,emp:c.emp,st:CHAIN_BY[c.chain].status}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'uf',type:'string'},
         {name:'cadeia',type:'string'},{name:'cap',type:'integer'},{name:'emp',type:'integer'},{name:'st',type:'string'}],
       renderer:{type:'unique-value',field:'st',defaultSymbol:this.sym([23,107,154,.85],6),
@@ -1221,12 +1279,10 @@ const GEO = {
           {value:'crit',symbol:this.sym([197,61,69,.9],7)},{value:'alto',symbol:this.sym([217,107,50,.88],6.5)},
           {value:'atencao',symbol:this.sym([213,169,50,.88],6)},{value:'normal',symbol:this.sym([23,107,154,.8],5.5)}]},
       featureReduction:{type:'cluster',clusterRadius:'52px',clusterMinSize:'18px',clusterMaxSize:'40px',
-        labelingInfo:[{deconflictionStrategy:'none',labelExpressionInfo:{expression:"Text($feature.cluster_count,'#,###')"},
+        labelingInfo:[{labelExpressionInfo:{expression:"Text($feature.cluster_count,'#,###')"},
           symbol:{type:'text',color:'#ffffff',font:{weight:'bold',size:'10px'}},labelPlacement:'center-center'}]},
       popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Cadeia: {cadeia}<br>Score de capacidade: {cap}<br>Empregos: {emp}'}
     });
-
-    // Projetos NIB
     this.layers.projects = FL({
       id:'projects', title:'Projetos NIB', geometryType:'point',
       source: projects.map(p=> new Graphic(mkPoint(p,{oid:p.oid,id:p.id,nome:p.name,uf:p.uf,estagio:p.stage,
@@ -1237,8 +1293,6 @@ const GEO = {
         visualVariables:[{type:'size',field:'capex',stops:[{value:20,size:6},{value:800,size:14},{value:3000,size:22}]}]},
       popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Estágio: {estagio}<br>CAPEX: R$ {capex} mi<br>Execução física: {prog}%<br>Risco: {risco}'}
     });
-
-    // Alertas ativos
     this.layers.alerts = FL({
       id:'alerts', title:'Alertas e riscos ativos', geometryType:'point',
       source: alerts.map((a,i)=> new Graphic(mkPoint(a,{oid:i+1,id:a.id,titulo:a.title,sev:a.sev,agente:a.agent,uf:a.uf}))),
@@ -1252,39 +1306,32 @@ const GEO = {
           {value:'normal',symbol:{type:'simple-marker',style:'circle',color:[23,107,154,.9],size:8,outline:{color:[255,255,255,1],width:1}}}]},
       popupTemplate:{title:'{titulo}',content:'<b>{id}</b> · {uf}<br>Severidade: {sev}<br>Detectado por: {agente}'}
     });
-
-    // Infraestrutura
     this.layers.infra = FL({
-      id:'infra', title:'Infraestrutura habilitadora', geometryType:'point',
-      source: infra.map((f,i)=> new Graphic(mkPoint(f,{oid:i+1,nome:f.name,tipo:f.kind,nota:f.note,cap:f.cap}))),
-      fields:[{name:'oid',type:'oid'},{name:'nome',type:'string'},{name:'tipo',type:'string'},{name:'nota',type:'string'},{name:'cap',type:'integer'}],
+      id:'infra', title:'Infraestrutura habilitadora', geometryType:'point', visible:false,
+      source: infra.map((f,i)=> new Graphic(mkPoint(f,{oid:i+1,id:f.id,nome:f.name,tipo:f.kind,nota:f.note,cap:f.cap}))),
+      fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'tipo',type:'string'},
+        {name:'nota',type:'string'},{name:'cap',type:'integer'}],
       renderer:{type:'unique-value',field:'tipo',defaultSymbol:this.sym([90,107,128,.9],8),
         uniqueValueInfos:[
           {value:'porto',symbol:{type:'simple-marker',style:'square',color:[14,90,130,.95],size:10,outline:{color:[255,255,255,1],width:1}}},
           {value:'energia',symbol:{type:'simple-marker',style:'diamond',color:[213,169,50,.95],size:11,outline:{color:[255,255,255,1],width:1}}},
           {value:'ferrovia',symbol:{type:'simple-marker',style:'cross',color:[62,87,114,1],size:11,outline:{color:[62,87,114,1],width:2}}},
           {value:'rodovia',symbol:{type:'simple-marker',style:'x',color:[90,107,128,1],size:10,outline:{color:[90,107,128,1],width:2}}}]},
-      popupTemplate:{title:'{nome}',content:'Tipo: {tipo}<br>{nota}<br>Capacidade relativa: {cap}%'},
-      visible:false
+      popupTemplate:{title:'{nome}',content:'Tipo: {tipo}<br>{nota}<br>Capacidade relativa: {cap}%'}
     });
-
-    // Territórios candidatos
     this.layers.territories = FL({
-      id:'territories', title:'Territórios candidatos (site selection)', geometryType:'point',
-      source: territories.map((t,i)=> new Graphic(mkPoint(t,{oid:i+1,id:t.id,nome:t.name,uf:t.uf,score:0,cls:'D'}))),
+      id:'territories', title:'Territórios candidatos (site selection)', geometryType:'point', visible:false,
+      source: territories.map((t,i)=> new Graphic(mkPoint(t,{oid:i+1,id:t.id,nome:t.name,uf:t.uf,score:t.score||0,cls:t.cls||'D'}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'uf',type:'string'},
         {name:'score',type:'double'},{name:'cls',type:'string'}],
       renderer:{type:'unique-value',field:'cls',defaultSymbol:this.sym([150,165,180,.8],9),
         uniqueValueInfos:[
           {value:'A',symbol:this.sym([22,138,105,.95],17)},{value:'B',symbol:this.sym([23,107,154,.9],13)},
           {value:'C',symbol:this.sym([213,169,50,.9],10)},{value:'D',symbol:this.sym([150,165,180,.75],7)}]},
-      popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Classe de favorabilidade: {cls}<br>Score multicritério: {score}'},
-      visible:false
+      popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Classe de favorabilidade: {cls}<br>Score multicritério: {score}'}
     });
-
-    // Vistorias de campo
     this.layers.inspections = FL({
-      id:'inspections', title:'Vistorias e evidências de campo', geometryType:'point',
+      id:'inspections', title:'Vistorias e evidências de campo', geometryType:'point', visible:false,
       source: inspections.map((v,i)=> new Graphic(mkPoint(v,{oid:i+1,id:v.id,projeto:v.project,status:v.status,equipe:v.team,ev:v.evScore}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'projeto',type:'string'},{name:'status',type:'string'},
         {name:'equipe',type:'string'},{name:'ev',type:'double'}],
@@ -1294,433 +1341,161 @@ const GEO = {
           {value:'Concluída',symbol:{type:'simple-marker',style:'square',color:[23,107,154,.95],size:10,outline:{color:[255,255,255,1],width:1.4}}},
           {value:'Em campo',symbol:{type:'simple-marker',style:'square',color:[213,169,50,.95],size:10,outline:{color:[255,255,255,1],width:1.4}}},
           {value:'Programada',symbol:{type:'simple-marker',style:'square',color:[150,165,180,.9],size:9,outline:{color:[255,255,255,1],width:1.2}}}]},
-      popupTemplate:{title:'Vistoria {id}',content:'Projeto: {projeto}<br>Status: {status}<br>Equipe: {equipe}<br>Evidence score: {ev}'},
-      visible:false
+      popupTemplate:{title:'Vistoria {id}',content:'Projeto: {projeto}<br>Status: {status}<br>Equipe: {equipe}<br>Evidence score: {ev}'}
     });
 
-    // Fluxos de comércio (GraphicsLayer)
     this.layers.flows = new GraphicsLayer({id:'flows', title:'Fluxos de importação estratégica', visible:false});
     trade.slice(0,10).forEach(t=>{
       t.orig.forEach(o=>{
-        const g = new Graphic({
+        this.layers.flows.add(new Graphic({
           geometry:{type:'polyline',paths:[[[o.lng,o.lat],[(o.lng-47)/2,(o.lat-14)/2],[-47.9,-15.8]]]},
-          symbol:{type:'simple-line',color:o.share>60?[197,61,69,.75]:[23,107,154,.55],width:Math.max(1,o.share/22),style:'solid'},
+          symbol:{type:'simple-line',color:o.share>60?[197,61,69,.75]:[23,107,154,.55],width:Math.max(1,o.share/22)},
           attributes:{ncm:t.ncm,desc:t.desc,pais:o.name,share:o.share},
           popupTemplate:{title:'{desc}',content:'NCM {ncm}<br>Origem: {pais}<br>Participação: {share}%'}
-        });
-        this.layers.flows.add(g);
+        }));
       });
     });
-
-    // Destaques e cenários
     this.layers.highlight = new GraphicsLayer({id:'highlight', title:'Seleção e cenários ativos'});
     this.layers.pulse = new GraphicsLayer({id:'pulse', title:'Eventos críticos em tempo real'});
 
-    /* ---- ArcGIS Living Atlas (camadas públicas) ---- */
-    this.layers.la_countries = new FeatureLayer({
-      id:'la_countries', title:'Living Atlas · Países do Mundo',
-      url:'https://services.arcgis.com/P3ePLMYs2RvChkJx/arcgis/rest/services/World_Countries_Generalized/FeatureServer/0',
-      opacity:0.5, visible:false,
-      renderer:{type:'simple',symbol:{type:'simple-fill',color:[23,107,154,.10],outline:{color:[23,107,154,.55],width:.6}}},
-      popupTemplate:{title:'{COUNTRY}',content:'Camada pública do ArcGIS Living Atlas — contexto de dependências externas.'}
-    });
-    this.layers.la_cities = new FeatureLayer({
-      id:'la_cities', title:'Living Atlas · Cidades do Mundo',
-      url:'https://services.arcgis.com/P3ePLMYs2RvChkJx/arcgis/rest/services/World_Cities/FeatureServer/0',
-      definitionExpression:"POP_RANK <= 4", visible:false, opacity:.9,
-      renderer:{type:'simple',symbol:this.sym([62,87,114,.75],5,[255,255,255,.9])}
-    });
-
-    this.map = new Map({ basemap: this.openBasemap('gray'), layers:[
-      this.layers.la_countries, this.layers.la_cities, this.layers.flows,
-      this.layers.companies, this.layers.infra, this.layers.territories,
-      this.layers.projects, this.layers.inspections, this.layers.alerts,
+    this.map = new Map({ basemap: this.openBasemap(this.basemapId), layers:[
+      this.layers.la_hillshade, this.layers.la_countries, this.layers.la_admin, this.layers.la_transport,
+      this.layers.flows, this.layers.companies, this.layers.infra, this.layers.territories,
+      this.layers.la_cities, this.layers.projects, this.layers.inspections, this.layers.alerts,
       this.layers.highlight, this.layers.pulse
     ]});
 
-    if(this.host) this.host.innerHTML='';   // remove o placeholder antes de ceder o container ao SDK
+    this.makeView([-52.5,-14.5],4);
+  },
+
+  makeView(center,zoom){
+    const {MapView}=this.mods;
+    if(this.host) this.host.innerHTML='';
     this.view = new MapView({
       container:this.host, map:this.map,
-      center:[-52.5,-14.5], zoom:4,
-      constraints:{minZoom:3,maxZoom:16,rotationEnabled:false},
-      popup:{dockEnabled:false,collapseEnabled:false},
-      ui:{components:['zoom','attribution']}
+      center:center||[-52.5,-14.5], zoom:zoom||4,
+      constraints:{minZoom:2,maxZoom:18,rotationEnabled:false}
     });
-
     this.view.when(()=>{
       this.ready=true; this.mode='arcgis';
-      const ph=this.host.querySelector('[data-geo-placeholder]'); if(ph) ph.remove();
-      this.diag.push('MapView pronto · basemap '+((this.BASEMAPS[this.basemapId]||{}).n||'—'));
-      bus.emit('geo:ready');
-      // clique no mapa sincroniza o painel contextual (RF-02 / RF-03)
       this.view.on('click', ev=>{
         this.view.hitTest(ev).then(r=>{
-          const hit = r.results.filter(x=>x.graphic && x.graphic.layer).map(x=>x.graphic)[0];
+          const hit=(r.results||[]).filter(x=>x.graphic&&x.graphic.layer).map(x=>x.graphic)[0];
           if(!hit) return;
-          const lid = hit.layer.id, a = hit.attributes||{};
-          if(lid==='companies' && a.id) openCompany(a.id);
-          else if(lid==='projects' && a.id) openProject(a.id);
-          else if(lid==='alerts' && a.id) openAlert(a.id);
-          else if(lid==='territories' && a.id) openTerritory(a.id);
-          else if(lid==='inspections' && a.id) openInspection(a.id);
-        });
-      });
-      // Living Atlas: informar indisponibilidade sem quebrar a aplicação
-      ['la_countries','la_cities'].forEach(k=>{
-        this.layers[k].when(()=>{},()=>{ this.layers[k].__err=true; bus.emit('geo:layererr',k); });
+          const lid=hit.layer.id, a=hit.attributes||{};
+          if(lid==='companies'&&a.id) openCompany(a.id);
+          else if(lid==='projects'&&a.id) openProject(a.id);
+          else if(lid==='alerts'&&a.id) openAlert(a.id);
+          else if(lid==='territories'&&a.id) openTerritory(a.id);
+          else if(lid==='inspections'&&a.id) openInspection(a.id);
+        }).catch(()=>{});
       });
       this.startPulse();
-    }, err=>{ this.fallback('MapView não pôde ser inicializado'); });
+      this.watchView();
+      bus.emit('geo:ready');
+    }, err=>{
+      this.mode='error';
+      this.note('Não foi possível inicializar o mapa neste ambiente.');
+      console.warn('MapView:',err);
+      bus.emit('geo:ready');
+    });
+  },
+  watchView(){
+    clearTimeout(this._watch);
+    this._watch=setTimeout(()=>{
+      if(this.mode!=='arcgis'||!this.view||!this.host||this.host.style.display==='none') return;
+      const painted=this.host.querySelector('.esri-view, canvas');
+      const sized=this.host.clientHeight>40 && this.host.clientWidth>40;
+      if(!painted && sized && !this._recreated){
+        this._recreated=true;
+        const c=(this.view.center&&[this.view.center.longitude,this.view.center.latitude])||[-52.5,-14.5];
+        const z=this.view.zoom||4;
+        try{ this.view.destroy(); }catch(e){}
+        this.view=null; this.makeView(c,z);
+      }
+    },1800);
   },
 
-  fallback(msg){
-    if(this.mode==='fallback') return;
-    clearTimeout(this._deadline);
-    this.failed=true; this.mode='fallback'; this.diag.push('contingência ativada: '+msg);
-    FB.build(msg);
-    this.ready=true;
-    bus.emit('geo:ready');
-  },
-
-  /* reposiciona a única instância de MapView no módulo ativo */
+  /* a única MapView é remontada no quadro do módulo ativo */
   mount(slotId){
-    const slot = document.getElementById(slotId);
-    if(!slot || !this.host) return;
-    if(this.host.parentElement !== slot){ slot.appendChild(this.host); }
+    const slot=document.getElementById(slotId);
+    if(!slot||!this.host) return;
+    if(this.host.parentElement!==slot) slot.appendChild(this.host);
     this.host.style.display='block';
-    if(this.mode==='fallback'){ FB.draw(); return; }
-    if(this.view) setTimeout(()=>{ try{ this.view.container = this.host; }catch(e){} }, 30);
+    if(this.view){
+      try{ if(this.view.container!==this.host) this.view.container=this.host; }catch(e){}
+      this.watchView();
+    }
   },
   park(){ if(this.host){ this.host.style.display='none'; document.body.appendChild(this.host); } },
-  redraw(){ if(this.mode==='fallback') FB.draw(); },
+  redraw(){},
 
   /* perfis de camada por módulo — a geografia se adapta ao contexto */
   profile(name){
     if(!this.ready) return;
-    const P = {
-      torre:      {companies:true, projects:true, alerts:true, infra:false, territories:false, inspections:false, flows:false, la_countries:false, la_cities:false},
-      cadeias:    {companies:true, projects:false, alerts:true, infra:true, territories:false, inspections:false, flows:true, la_countries:true, la_cities:false},
-      empresas:   {companies:true, projects:false, alerts:false, infra:true, territories:false, inspections:false, flows:false, la_countries:false, la_cities:true},
-      comercio:   {companies:false, projects:false, alerts:false, infra:true, territories:false, inspections:false, flows:true, la_countries:true, la_cities:true},
-      territorial:{companies:true, projects:false, alerts:false, infra:true, territories:true, inspections:false, flows:false, la_countries:false, la_cities:true},
-      pipeline:   {companies:false, projects:true, alerts:false, infra:true, territories:false, inspections:false, flows:false, la_countries:false, la_cities:false},
-      riscos:     {companies:true, projects:true, alerts:true, infra:true, territories:false, inspections:false, flows:false, la_countries:false, la_cities:false},
-      casos:      {companies:false, projects:true, alerts:true, infra:false, territories:false, inspections:true, flows:false, la_countries:false, la_cities:false},
-      resultados: {companies:false, projects:true, alerts:false, infra:false, territories:false, inspections:true, flows:false, la_countries:false, la_cities:false}
-    }[name] || {};
-    Object.keys(P).forEach(k=>{ if(this.layers[k]) this.layers[k].visible = P[k]; });
-    if(this.mode==='fallback') FB.draw();
+    const P={
+      torre:      {companies:1,projects:1,alerts:1,infra:0,territories:0,inspections:0,flows:0,la_hillshade:0,la_countries:0,la_admin:0,la_cities:0,la_transport:0},
+      cadeias:    {companies:1,projects:0,alerts:1,infra:1,territories:0,inspections:0,flows:1,la_hillshade:0,la_countries:1,la_admin:0,la_cities:0,la_transport:0},
+      empresas:   {companies:1,projects:0,alerts:0,infra:1,territories:0,inspections:0,flows:0,la_hillshade:0,la_countries:0,la_admin:1,la_cities:1,la_transport:1},
+      comercio:   {companies:0,projects:0,alerts:0,infra:1,territories:0,inspections:0,flows:1,la_hillshade:0,la_countries:1,la_admin:0,la_cities:1,la_transport:0},
+      territorial:{companies:1,projects:0,alerts:0,infra:1,territories:1,inspections:0,flows:0,la_hillshade:1,la_countries:0,la_admin:1,la_cities:1,la_transport:1},
+      pipeline:   {companies:0,projects:1,alerts:0,infra:1,territories:0,inspections:0,flows:0,la_hillshade:0,la_countries:0,la_admin:1,la_cities:0,la_transport:0},
+      riscos:     {companies:1,projects:1,alerts:1,infra:1,territories:0,inspections:0,flows:0,la_hillshade:1,la_countries:0,la_admin:1,la_cities:0,la_transport:0},
+      casos:      {companies:0,projects:1,alerts:1,infra:0,territories:0,inspections:1,flows:0,la_hillshade:0,la_countries:0,la_admin:1,la_cities:0,la_transport:1},
+      resultados: {companies:0,projects:1,alerts:0,infra:0,territories:0,inspections:1,flows:0,la_hillshade:0,la_countries:0,la_admin:1,la_cities:0,la_transport:0}
+    }[name]||{};
+    Object.keys(P).forEach(k=>{ if(this.layers[k]) this.layers[k].visible=!!P[k]; });
     bus.emit('geo:layers');
   },
-  goTo(target,zoom){
-    if(!this.ready) return;
-    if(this.mode==='fallback'){ FB.goTo(target,zoom); return; }
-    if(!this.view) return;
-    try{ this.view.goTo({center:[target.lng,target.lat],zoom:zoom||8},{duration:900}); }catch(e){}
+  goTo(t,zoom){
+    if(!this.ready||!this.view) return;
+    try{ const p=this.view.goTo({center:[t.lng,t.lat],zoom:zoom||8},{duration:900}); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
   },
   brasil(){
-    if(this.mode==='fallback'){ FB.goTo({lat:-14.5,lng:-52.5},4); return; }
-    if(this.ready&&this.view) this.view.goTo({center:[-52.5,-14.5],zoom:4},{duration:800}).catch(()=>{});
+    if(!this.ready||!this.view) return;
+    try{ const p=this.view.goTo({center:[-52.5,-14.5],zoom:4},{duration:800}); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
   },
-  clearHighlight(){
-    if(this.mode==='fallback'){ FB.hl=[]; FB.draw(); return; }
-    if(this.layers.highlight) this.layers.highlight.removeAll();
-  },
+  clearHighlight(){ if(this.layers.highlight) this.layers.highlight.removeAll(); },
   mark(o,color,label){
-    if(this.mode==='fallback'){ FB.hl.push({t:'mark',lat:o.lat,lng:o.lng,c:FB.rgb(color),label}); FB.draw(); return; }
     if(!this.ready||!this.mods) return;
     const {Graphic}=this.mods;
     this.layers.highlight.add(new Graphic({
       geometry:{type:'point',longitude:o.lng,latitude:o.lat},
-      symbol:{type:'simple-marker',style:'circle',color:[0,0,0,0],size:26,outline:{color:color||[23,107,154,1],width:3}},
-      attributes:{}
+      symbol:{type:'simple-marker',style:'circle',color:[0,0,0,0],size:26,outline:{color:color||[23,107,154,1],width:3}}
     }));
-    if(label){
-      this.layers.highlight.add(new Graphic({
-        geometry:{type:'point',longitude:o.lng,latitude:o.lat},
-        symbol:{type:'text',color:'#14345B',haloColor:'#fff',haloSize:2,text:label,yoffset:16,
-          font:{size:10,weight:'bold',family:'sans-serif'}}
-      }));
-    }
+    if(label) this.layers.highlight.add(new Graphic({
+      geometry:{type:'point',longitude:o.lng,latitude:o.lat},
+      symbol:{type:'text',color:'#14345B',haloColor:'#fff',haloSize:2,text:label,yoffset:16,
+        font:{size:10,weight:'bold',family:'sans-serif'}}
+    }));
   },
   ring(o,radiusDeg,color){
-    if(this.mode==='fallback'){ FB.hl.push({t:'ring',lat:o.lat,lng:o.lng,r:radiusDeg,c:FB.rgb(color)||'#C53D45'}); FB.draw(); return; }
     if(!this.ready||!this.mods) return;
-    const {Graphic}=this.mods; const pts=[];
-    for(let i=0;i<=48;i++){ const a=i/48*Math.PI*2; pts.push([o.lng+radiusDeg*Math.cos(a)/Math.cos(o.lat*Math.PI/180), o.lat+radiusDeg*Math.sin(a)]); }
+    const {Graphic}=this.mods, pts=[];
+    for(let i=0;i<=48;i++){ const a=i/48*Math.PI*2;
+      pts.push([o.lng+radiusDeg*Math.cos(a)/Math.cos(o.lat*Math.PI/180), o.lat+radiusDeg*Math.sin(a)]); }
     this.layers.highlight.add(new Graphic({geometry:{type:'polygon',rings:[pts]},
       symbol:{type:'simple-fill',color:color||[197,61,69,.10],outline:{color:color||[197,61,69,.6],width:1.4,style:'dash'}}}));
   },
-  /* pulsação apenas para eventos críticos */
   pulseAt(o){
-    if(this.mode==='fallback'){ FB.pulse.push({lat:o.lat,lng:o.lng,at:Date.now()}); FB.draw();
-      setTimeout(()=>{ FB.pulse.shift(); FB.draw(); }, 8000); return; }
     if(!this.ready||!this.mods) return;
-    const {Graphic}=this.mods; const lyr=this.layers.pulse;
-    const g = new Graphic({geometry:{type:'point',longitude:o.lng,latitude:o.lat},
+    const {Graphic}=this.mods, lyr=this.layers.pulse;
+    const g=new Graphic({geometry:{type:'point',longitude:o.lng,latitude:o.lat},
       symbol:{type:'simple-marker',style:'circle',color:[197,61,69,.28],size:8,outline:{color:[197,61,69,.9],width:2}}});
-    lyr.add(g); let s=8, up=true, n=0;
+    lyr.add(g); let s=8,up=true,n=0;
     const t=setInterval(()=>{
-      s += up?4:-4; if(s>34) up=false; if(s<8) up=true; n++;
-      const sym=g.symbol.clone(); sym.size=s; sym.color=[197,61,69,Math.max(.05,.35-s/120)]; g.symbol=sym;
+      s+=up?4:-4; if(s>34) up=false; if(s<8) up=true; n++;
+      try{ const sym=g.symbol.clone(); sym.size=s; sym.color=[197,61,69,Math.max(.05,.35-s/120)]; g.symbol=sym; }catch(e){}
       if(n>60){ clearInterval(t); lyr.remove(g); }
     },70);
   },
   startPulse(){
     if(this.pulseTimer) clearInterval(this.pulseTimer);
-    this.pulseTimer = setInterval(()=>{
-      if(!state.live || !this.layers.alerts || !this.layers.alerts.visible) return;
-      const crit = alerts.filter(a=>a.sev==='crit'&&a.open);
+    this.pulseTimer=setInterval(()=>{
+      if(!state.live||!this.layers.alerts||!this.layers.alerts.visible) return;
+      const crit=alerts.filter(a=>a.sev==='crit'&&a.open);
       if(crit.length) this.pulseAt(crit[Math.floor(Math.random()*crit.length)]);
-    }, 9000);
-  },
-  /* Basemaps abertos — serviços públicos da Esri e OpenStreetMap.
-     Nenhum exige chave de API, conta de desenvolvedor ou consumo de créditos. */
-  BASEMAPS:{
-    gray:{n:'Esri · World Light Gray Canvas', url:'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer',
-          ref:'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer'},
-    topo:{n:'Esri · World Topographic', url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer'},
-    imagery:{n:'Esri · World Imagery', url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'},
-    physical:{n:'Esri · World Physical Map', url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer'},
-    osm:{n:'OpenStreetMap', osm:true}
-  },
-  openBasemap(id){
-    const {Basemap,TileLayer}=this.mods, b=this.BASEMAPS[id]||this.BASEMAPS.gray;
-    if(b.osm) return 'osm';
-    const layers=[new TileLayer({url:b.url})];
-    if(b.ref) layers.push(new TileLayer({url:b.ref}));
-    return new Basemap({baseLayers:layers, title:b.n, id:'open-'+id});
-  },
-  setBasemap(id){
-    this.basemapId=id;
-    if(this.mode==='fallback'){ FB.setSource(id); return; }
-    if(!this.ready) return;
-    try{ this.map.basemap=this.openBasemap(id); }
-    catch(e){ toast('warn','Basemap indisponível','Não foi possível carregar o serviço de base neste ambiente.'); }
-  }
-};
-
-/* ============================================================
-   MOTOR DE CONTINGÊNCIA — renderizador geoespacial próprio,
-   usado quando o SDK ArcGIS não pode ser carregado no ambiente.
-   Mantém camadas, seleção, navegação e pulsação de eventos.
-   ============================================================ */
-const BR_OUTLINE = [
- [5.2,-60.7],[4.5,-60.0],[4.1,-59.5],[3.9,-58.4],[1.9,-56.0],[2.2,-55.0],[3.5,-51.6],[4.2,-51.6],
- [1.8,-50.0],[0.6,-50.4],[-1.0,-46.0],[-2.5,-44.0],[-2.8,-41.5],[-3.0,-39.0],[-5.0,-35.2],[-8.0,-34.8],
- [-10.5,-36.5],[-13.0,-38.5],[-15.8,-38.9],[-18.5,-39.7],[-20.5,-40.3],[-22.9,-42.0],[-23.0,-44.5],
- [-24.0,-46.5],[-25.5,-48.5],[-28.5,-48.8],[-30.5,-50.5],[-32.5,-52.5],[-33.7,-53.4],[-33.0,-53.5],
- [-31.0,-55.5],[-30.2,-57.6],[-28.0,-56.0],[-27.0,-54.5],[-25.5,-54.6],[-24.0,-54.3],[-22.3,-55.8],
- [-22.0,-57.9],[-20.5,-58.0],[-19.0,-57.8],[-18.0,-57.5],[-16.3,-58.4],[-15.0,-60.2],[-12.5,-60.5],
- [-11.0,-62.0],[-10.0,-65.3],[-9.8,-67.0],[-11.0,-68.7],[-9.5,-70.6],[-7.5,-73.6],[-5.0,-72.9],
- [-4.2,-70.0],[-2.2,-69.5],[-0.2,-69.4],[0.6,-69.8],[1.8,-67.1],[3.6,-67.9],[1.4,-66.2],[0.7,-64.0],
- [3.9,-63.3],[5.2,-60.7]
-];
-const FB = {
-  z:4, cx:-52.5, cy:-14.5, hl:[], pulse:[], msg:'', W:800, H:400, bound:false, built:false,
-  tiles:{}, tileOK:false, tileFail:0, srcIdx:0, tilesOn:true, raf:null,
-  /* mesmas bases abertas do modo SDK, servidas por requisição de imagem */
-  SRC:[
-    {id:'gray', n:'Esri · World Light Gray Canvas', a:'Esri, HERE, Garmin, © OpenStreetMap contributors',
-     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${z}/${y}/${x}`},
-    {id:'topo', n:'Esri · World Topographic', a:'Esri, USGS, NGA, NASA, © OpenStreetMap contributors',
-     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${z}/${y}/${x}`},
-    {id:'imagery', n:'Esri · World Imagery', a:'Esri, Maxar, Earthstar Geographics',
-     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`},
-    {id:'physical', n:'Esri · World Physical Map', a:'Esri, U.S. National Park Service',
-     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/${z}/${y}/${x}`},
-    {id:'osm', n:'OpenStreetMap', a:'© OpenStreetMap contributors',
-     u:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`}
-  ],
-  setSource(id){
-    const i=this.SRC.findIndex(s=>s.id===id); if(i<0) return;
-    this.srcIdx=i; this.tiles={}; this.tileOK=false; this.tileFail=0;
-    const c=document.getElementById('fbTiles'); if(c) c.innerHTML='';
-    this.draw();
-  },
-  rgb(c){ if(!c) return null; if(typeof c==='string') return c;
-    return `rgba(${c[0]},${c[1]},${c[2]},${c[3]!=null?c[3]:1})`; },
-
-  /* --- projeção Web Mercator (compatível com o esquema de tiles) --- */
-  world(){ return 256*Math.pow(2,this.z); },
-  px(lng){ return (lng+180)/360*this.world(); },
-  py(lat){ const s=Math.sin(clamp(lat,-85.05,85.05)*Math.PI/180);
-    return (0.5 - Math.log((1+s)/(1-s))/(4*Math.PI))*this.world(); },
-  lngAt(px){ return px/this.world()*360-180; },
-  latAt(py){ const n=Math.PI*(1-2*py/this.world()); return Math.atan(Math.sinh(n))*180/Math.PI; },
-  ox(){ return this.px(this.cx)-this.W/2; },
-  oy(){ return this.py(this.cy)-this.H/2; },
-  X(lng){ return this.px(lng)-this.ox(); },
-  Y(lat){ return this.py(lat)-this.oy(); },
-
-  build(msg){
-    this.msg=msg||'';
-    const mk=(id,title,visible)=>({id,title,visible:!!visible,__fb:true});
-    GEO.layers = {
-      companies:mk('companies','Estabelecimentos industriais (NIB)',true),
-      projects:mk('projects','Projetos NIB',true),
-      alerts:mk('alerts','Alertas e riscos ativos',true),
-      infra:mk('infra','Infraestrutura habilitadora',false),
-      territories:mk('territories','Territórios candidatos (site selection)',false),
-      inspections:mk('inspections','Vistorias e evidências de campo',false),
-      flows:mk('flows','Fluxos de importação estratégica',false),
-      la_countries:Object.assign(mk('la_countries','Living Atlas · Países do Mundo',false),{__err:true}),
-      la_cities:Object.assign(mk('la_cities','Living Atlas · Cidades do Mundo',false),{__err:true})
-    };
-    this.mountDom(); this.bindHost(); this.draw();
-  },
-  mountDom(){
-    const h=GEO.host; if(!h) return;
-    h.innerHTML = `<div id="fbTiles" style="position:absolute;inset:0;overflow:hidden;background:#DEE7EF"></div>
-      <svg id="fbSvg" style="position:absolute;inset:0;width:100%;height:100%;display:block"></svg>
-      <div id="fbAttr" style="position:absolute;right:6px;bottom:5px;font-family:var(--ff-m);font-size:9px;color:#3E5772;background:rgba(255,255,255,.82);padding:1px 6px;border-radius:3px;pointer-events:none"></div>`;
-    this.built=true;
-  },
-  bindHost(){
-    const h=GEO.host; if(!h||this.bound) return; this.bound=true;
-    h.style.cursor='grab';
-    let drag=null;
-    h.addEventListener('mousedown',e=>{ drag={x:e.clientX,y:e.clientY,ox:this.ox(),oy:this.oy(),moved:false}; h.style.cursor='grabbing'; e.preventDefault(); });
-    window.addEventListener('mouseup',()=>{ if(drag) setTimeout(()=>{drag=null;},0); h.style.cursor='grab'; });
-    window.addEventListener('mousemove',e=>{
-      if(!drag) return;
-      drag.moved=true;
-      const nx=drag.ox-(e.clientX-drag.x), ny=drag.oy-(e.clientY-drag.y);
-      this.cx=this.lngAt(nx+this.W/2); this.cy=this.latAt(ny+this.H/2);
-      this.schedule();
-    });
-    h.addEventListener('wheel',e=>{
-      e.preventDefault();
-      const r=h.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
-      const lng=this.lngAt(this.ox()+mx), lat=this.latAt(this.oy()+my);
-      const nz=clamp(this.z+(e.deltaY<0?1:-1),2,16);
-      if(nz===this.z) return;
-      this.z=nz;
-      const nox=this.px(lng)-mx, noy=this.py(lat)-my;
-      this.cx=this.lngAt(nox+this.W/2); this.cy=this.latAt(noy+this.H/2);
-      this.tiles={}; const c=document.getElementById('fbTiles'); if(c) c.innerHTML='';
-      this.schedule();
-    },{passive:false});
-    h.addEventListener('click',e=>{
-      if(drag&&drag.moved) return;
-      const t=e.target.closest('[data-fb]'); if(!t) return;
-      const i=t.dataset.fb.indexOf('|'), kind=t.dataset.fb.slice(0,i), oid=t.dataset.fb.slice(i+1);
-      ({companies:openCompany,projects:openProject,alerts:openAlert,territories:openTerritory,inspections:openInspection}[kind]||(()=>{}))(oid);
-    });
-    if(window.ResizeObserver){ try{ new ResizeObserver(()=>this.schedule()).observe(h); }catch(e){} }
-  },
-  schedule(){ if(this.raf) return; this.raf=requestAnimationFrame(()=>{ this.raf=null; this.draw(); }); },
-  fit(){ const h=GEO.host; this.W=Math.max(120,h.clientWidth||800); this.H=Math.max(120,h.clientHeight||400); },
-  goTo(t,zoom){ this.cx=t.lng; this.cy=t.lat; if(zoom) this.z=clamp(Math.round(zoom),2,16); this.draw(); },
-  onTileError(img){
-    this.tileFail++;
-    img.style.display='none';
-    if(!this.tileOK && this.tileFail>=3){
-      if(this.srcIdx < this.SRC.length-1){
-        this.srcIdx++; this.tileFail=0; this.tiles={};
-        const c=document.getElementById('fbTiles'); if(c) c.innerHTML='';
-        GEO.diag.push(`tiles: alternando para ${this.SRC[this.srcIdx].n}`);
-        this.draw();
-      } else if(this.tilesOn){
-        this.tilesOn=false;
-        GEO.diag.push('tiles: imagens externas bloqueadas — base vetorial simplificada ativada');
-        this.draw();
-      }
-    }
-  },
-  onTileLoad(){ if(!this.tileOK){ this.tileOK=true; GEO.diag.push(`tiles: ${this.SRC[this.srcIdx].n} respondendo`); bus.emit('geo:tiles'); } },
-  drawTiles(){
-    const c=document.getElementById('fbTiles'); if(!c) return;
-    if(!this.tilesOn){
-      c.innerHTML=`<svg width="100%" height="100%" viewBox="0 0 ${this.W} ${this.H}" style="display:block">${this.vectorBase()}</svg>`;
-      const at0=document.getElementById('fbAttr'); if(at0) at0.textContent='Base cartográfica local · NIB Intelligence Hub';
-      return; }
-    const n=Math.pow(2,this.z), ox=this.ox(), oy=this.oy();
-    const x0=Math.floor(ox/256), x1=Math.floor((ox+this.W)/256);
-    const y0=clamp(Math.floor(oy/256),0,n-1), y1=clamp(Math.floor((oy+this.H)/256),0,n-1);
-    const keep={};
-    for(let x=x0;x<=x1;x++){
-      for(let y=y0;y<=y1;y++){
-        const wx=((x%n)+n)%n, key=`${this.z}/${wx}/${y}`;
-        keep[key]=1;
-        let el=this.tiles[key];
-        if(!el){
-          el=document.createElement('img');
-          el.src=this.SRC[this.srcIdx].u(this.z,wx,y);
-          el.alt=''; el.decoding='async'; el.draggable=false;
-          el.style.cssText='position:absolute;width:256px;height:256px;user-select:none;pointer-events:none';
-          el.onerror=()=>this.onTileError(el);
-          el.onload=()=>this.onTileLoad();
-          this.tiles[key]=el; c.appendChild(el);
-        }
-        el.style.left=(x*256-ox)+'px'; el.style.top=(y*256-oy)+'px';
-      }
-    }
-    Object.keys(this.tiles).forEach(k=>{ if(!keep[k]){ const e=this.tiles[k]; if(e&&e.parentNode) e.parentNode.removeChild(e); delete this.tiles[k]; } });
-    const at=document.getElementById('fbAttr');
-    if(at) at.textContent = this.SRC[this.srcIdx].a;
-  },
-  /* base cartográfica local: nenhum recurso externo, usada quando o ambiente
-     bloqueia também requisições de imagem */
-  vectorBase(){
-    let g=`<rect width="${this.W}" height="${this.H}" fill="#DCE7EF"/>`;
-    for(let lat=-40;lat<=15;lat+=5){ const y=this.Y(lat); if(y>-10&&y<this.H+10){
-      g+=`<line x1="0" y1="${y}" x2="${this.W}" y2="${y}" stroke="#CCDAE5"/>`;
-      if(this.z>=4) g+=`<text x="3" y="${y-2}" style="font-family:var(--ff-m);font-size:8px;fill:#93A8BC">${lat}°</text>`; } }
-    for(let lng=-80;lng<=-25;lng+=5){ const x=this.X(lng); if(x>-10&&x<this.W+10){
-      g+=`<line x1="${x}" y1="0" x2="${x}" y2="${this.H}" stroke="#CCDAE5"/>`;
-      if(this.z>=4) g+=`<text x="${x+3}" y="10" style="font-family:var(--ff-m);font-size:8px;fill:#93A8BC">${lng}°</text>`; } }
-    const path=BR_OUTLINE.map(p=>`${this.X(p[1]).toFixed(1)},${this.Y(p[0]).toFixed(1)}`).join(' L');
-    g+=`<path d="M${path} Z" fill="#F2F6FA" stroke="#93A8BC" stroke-width="1.4"/>`;
-    if(this.z>=4) UFS.forEach(u=>{
-      const x=this.X(u.lng), y=this.Y(u.lat);
-      if(x<-20||y<-20||x>this.W+20||y>this.H+20) return;
-      g+=`<circle cx="${x}" cy="${y}" r="1.6" fill="#93A8BC"/>
-        <text x="${x+4}" y="${y+3}" style="font-family:var(--ff-d);font-size:${this.z>=6?10:9}px;letter-spacing:.5px;fill:#7C93A9">${this.z>=6?esc(u.name):u.uf}</text>`;
-    });
-    return g;
-  },
-  pt(o,kind,shape,color,size,tip){
-    const x=this.X(o.lng), y=this.Y(o.lat);
-    if(x<-40||y<-40||x>this.W+40||y>this.H+40) return '';
-    const t=`<title>${esc(tip||'')}</title>`;
-    const a=`data-fb="${kind}|${o.id}" style="cursor:pointer"`;
-    if(shape==='sq') return `<rect ${a} x="${x-size/2}" y="${y-size/2}" width="${size}" height="${size}" rx="1" fill="${color}" stroke="#fff" stroke-width="1">${t}</rect>`;
-    if(shape==='tri') return `<path ${a} d="M${x},${y-size} L${x+size},${y+size*0.8} L${x-size},${y+size*0.8} Z" fill="${color}" stroke="#fff" stroke-width="1">${t}</path>`;
-    if(shape==='dia') return `<path ${a} d="M${x},${y-size} L${x+size},${y} L${x},${y+size} L${x-size},${y} Z" fill="${color}" stroke="#fff" stroke-width="1">${t}</path>`;
-    return `<circle ${a} cx="${x}" cy="${y}" r="${size}" fill="${color}" stroke="#fff" stroke-width=".9">${t}</circle>`;
-  },
-  draw(){
-    const h=GEO.host; if(!h||h.style.display==='none') return;
-    if(!this.built || !document.getElementById('fbSvg')) this.mountDom();
-    this.fit();
-    this.drawTiles();
-    const L=GEO.layers;
-    let g='';
-    if(L.flows&&L.flows.visible) trade.slice(0,8).forEach(t=> t.orig.forEach(o=>{
-      const ax=this.X(o.lng), ay=this.Y(clamp(o.lat,-80,80)), bx=this.X(-47.9), by=this.Y(-15.8);
-      g+=`<path d="M${ax},${ay} Q${(ax+bx)/2},${(ay+by)/2-Math.abs(bx-ax)*0.18} ${bx},${by}" fill="none"
-        stroke="${o.share>60?'#C53D45':'#176B9A'}" stroke-width="${Math.max(1,o.share/26)}" opacity=".55"/>`;
-    }));
-    if(L.infra&&L.infra.visible) infra.forEach(f=> g+=this.pt(f,'infra','dia',f.kind==='porto'?'#0E5A82':f.kind==='energia'?'#D5A932':'#3E5772',5,`${f.name} — ${f.note}`));
-    if(L.companies&&L.companies.visible) companies.forEach(c=> g+=this.pt(c,'companies','ci',SEVC[CHAIN_BY[c.chain].status],this.z>6?4.2:3.1,`${c.name} · ${c.uf}`));
-    if(L.territories&&L.territories.visible) territories.forEach(t=> g+=this.pt(t,'territories','ci',{A:'#168A69',B:'#176B9A',C:'#D5A932',D:'#96A5B4'}[t.cls]||'#96A5B4',t.cls==='A'?7:5,`${t.name} · classe ${t.cls} · score ${t.score}`));
-    if(L.projects&&L.projects.visible) projects.forEach(p=> g+=this.pt(p,'projects','sq','#14345B',clamp(4+p.capex/4e8,4,12),`${p.id} · ${p.name} · ${fmtBRL(p.capex)}`));
-    if(L.inspections&&L.inspections.visible) inspections.forEach(v=> g+=this.pt(v,'inspections','sq',{Validada:'#168A69',Concluída:'#176B9A','Em campo':'#D5A932',Programada:'#96A5B4'}[v.status],6,`${v.id} · ${v.status}`));
-    if(L.alerts&&L.alerts.visible) alerts.filter(a=>a.open).forEach(a=> g+=this.pt(a,'alerts','tri',SEVC[a.sev],a.sev==='crit'?7:5.5,`${a.title} · ${a.uf}`));
-    this.hl.forEach(m=>{
-      const x=this.X(m.lng), y=this.Y(m.lat);
-      if(m.t==='ring'){ const r=Math.abs(this.Y(m.lat+(m.r||1))-y);
-        g+=`<circle cx="${x}" cy="${y}" r="${Math.max(12,r)}" fill="none" stroke="${m.c}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".85"/>`; }
-      else { g+=`<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="${m.c||'#176B9A'}" stroke-width="2.4"/>`;
-        if(m.label) g+=`<text x="${x}" y="${y-18}" text-anchor="middle" style="font-family:var(--ff-d);font-size:10px;font-weight:600;fill:#14345B;paint-order:stroke;stroke:#fff;stroke-width:3">${esc(m.label)}</text>`; }
-    });
-    this.pulse.forEach(p=>{ const x=this.X(p.lng), y=this.Y(p.lat);
-      g+=`<circle cx="${x}" cy="${y}" r="6" fill="rgba(197,61,69,.2)" stroke="#C53D45" stroke-width="2">
-        <animate attributeName="r" values="6;30;6" dur="2.2s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".9;0;.9" dur="2.2s" repeatCount="indefinite"/></circle>`; });
-    const svg=document.getElementById('fbSvg');
-    if(svg){ svg.setAttribute('viewBox',`0 0 ${this.W} ${this.H}`); svg.innerHTML=g; }
+    },9000);
   }
 };
 
@@ -1729,7 +1504,7 @@ function mapChrome(opts={}){
   return `
   <div class="map-overlay map-stat" id="mapStat">${(opts.chips||[]).map(c=>`<div class="mchip">${c}</div>`).join('')}</div>
   <div class="map-overlay map-layers">
-    <div class="hd"><span class="eyebrow">Camadas ArcGIS</span><span class="tag b" style="margin-left:auto">SDK 4.31</span></div>
+    <div class="hd"><span class="eyebrow">Camadas ArcGIS</span><span class="tag b" style="margin-left:auto">SDK 5.1</span></div>
     <div class="bd" id="layerList"></div>
     <div class="hd" style="border-top:1px solid var(--line);border-bottom:none">
       <select id="basemapSel" style="width:100%;border:1px solid var(--line);border-radius:3px;padding:3px 5px;font-size:11px"></select>
@@ -1745,81 +1520,22 @@ function mapChrome(opts={}){
 }
 function bindMapChrome(){
   const list=$('#layerList'); if(!list) return;
-  const order=['companies','projects','alerts','infra','territories','inspections','flows','la_countries','la_cities'];
-  if(!GEO.ready){ list.innerHTML=`<div class="lyr faint">Conectando ao serviço geoespacial…</div>`; return; }
-  if(GEO.mode==='fallback'){
-    const st=$('#mapStat');
-    if(st && !$('#fbChip')) st.insertAdjacentHTML('beforeend',
-      `<div class="mchip" id="fbChip" style="border-color:#EFCBCE;background:#FDF5F5">
-        <span class="dotm beat" style="color:#C53D45"></span><b style="color:#C53D45">SDK bloqueado</b><span class="faint tiny">base raster</span>
-        <button class="btn sm ghost" onclick="geoDiag()" style="height:18px;padding:0 5px">diagnóstico</button></div>`);
-  }
+  const order=['companies','projects','alerts','infra','territories','inspections','flows',
+               'la_hillshade','la_countries','la_admin','la_cities','la_transport'];
+  if(!GEO.ready){ list.innerHTML=`<div class="lyr faint">Carregando serviço geoespacial…</div>`; return; }
   list.innerHTML = order.filter(k=>GEO.layers[k]).map(k=>{
     const l=GEO.layers[k], la=k.startsWith('la_');
     return `<label class="lyr"><input type="checkbox" data-lyr="${k}" ${l.visible?'checked':''}>
       <span class="nm" title="${esc(l.title)}">${esc(l.title)}</span>
-      ${la?'<span class="tag b" style="font-size:8.5px;padding:1px 4px">LA</span>':''}
-      ${l.__err?'<span class="tag r" style="font-size:8.5px;padding:1px 4px">off</span>':''}</label>`;
+      ${la?'<span class="tag b" style="font-size:8.5px;padding:1px 4px">LA</span>':''}</label>`;
   }).join('');
-  $$('#layerList input').forEach(i=> i.onchange=()=>{ GEO.layers[i.dataset.lyr].visible=i.checked; GEO.redraw(); });
+  $$('#layerList input').forEach(i=> i.onchange=()=>{ GEO.layers[i.dataset.lyr].visible=i.checked; });
   const bs=$('#basemapSel');
   if(bs){
-    if(GEO.mode==='fallback' && !FB.tilesOn){
-      bs.innerHTML='<option>Base cartográfica local — imagens externas bloqueadas</option>'; bs.disabled=true;
-    } else {
-      bs.disabled=false;
-      bs.innerHTML = Object.keys(GEO.BASEMAPS).map(k=>
-        `<option value="${k}" ${k===GEO.basemapId?'selected':''}>Base aberta · ${esc(GEO.BASEMAPS[k].n)}</option>`).join('');
-      bs.onchange=()=>GEO.setBasemap(bs.value);
-    }
+    bs.innerHTML = Object.keys(GEO.BASEMAPS).map(k=>
+      `<option value="${k}" ${k===GEO.basemapId?'selected':''}>Base aberta · ${esc(GEO.BASEMAPS[k].n)}</option>`).join('');
+    bs.onchange=()=>GEO.setBasemap(bs.value);
   }
-}
-
-/* diagnóstico do carregamento do SDK */
-function geoDiag(){
-  const imgBlocked = GEO.mode==='fallback' && !FB.tilesOn;
-  modal('Serviço geoespacial','Diagnóstico do ArcGIS Maps SDK',`
-    <div class="notice ${GEO.mode==='arcgis'?'':'crit'}" style="margin-bottom:12px"><div>
-      <b>Estado atual: ${GEO.mode==='arcgis'?'ArcGIS Maps SDK ativo':'modo de contingência'}.</b>
-      ${GEO.mode==='arcgis'
-        ? 'Todas as camadas, popups e análises espaciais operam sobre o SDK, usando exclusivamente serviços abertos.'
-        : (imgBlocked
-          ? 'Este ambiente bloqueou <b>scripts</b> de <span class="mono">js.arcgis.com</span> e também <b>requisições de imagem</b> para serviços externos. Nenhum recurso de rede sai desta página. A plataforma segue operando com base cartográfica local: camadas, seleção, navegação, destaque e pulsação de eventos permanecem ativos.'
-          : 'Este ambiente bloqueou o carregamento de scripts de <span class="mono">js.arcgis.com</span>. A base cartográfica continua vindo de serviços abertos da Esri por requisição de imagem.')}
-    </div></div>
-    <div class="notice" style="margin-bottom:12px"><div>
-      <b>Nenhum serviço desta aplicação exige chave de API.</b> O bloqueio observado é de política de conteúdo do ambiente, não de autenticação ou de créditos — os tempos de falha registrados abaixo, na casa de poucos milissegundos, são característicos de recusa por política e não de indisponibilidade do serviço.
-    </div></div>
-    <div class="sec">Tentativas de carregamento</div>
-    <div class="logbox" style="height:150px;border-radius:4px">${GEO.diag.map(d=>`<div class="ln"><span class="ts">•</span> ${esc(d)}</div>`).join('')||'<div class="ln di">Sem registros.</div>'}</div>
-    <div class="sec">Serviços abertos utilizados — todos sem chave</div>
-    <table class="tbl"><thead><tr><th>Serviço</th><th>Tipo</th><th>Endpoint</th></tr></thead><tbody>
-      <tr><td>ArcGIS Maps SDK for JavaScript 4.31</td><td class="tiny">Biblioteca</td><td class="mono tiny">js.arcgis.com/4.31/</td></tr>
-      <tr><td>World Light Gray Canvas + Reference</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · Canvas/World_Light_Gray_Base</td></tr>
-      <tr><td>World Topographic Map</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · World_Topo_Map</td></tr>
-      <tr><td>World Imagery</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · World_Imagery</td></tr>
-      <tr><td>World Physical Map</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · World_Physical_Map</td></tr>
-      <tr><td>OpenStreetMap</td><td class="tiny">Basemap</td><td class="mono tiny">tile.openstreetmap.org</td></tr>
-      <tr><td>Living Atlas · World Countries Generalized</td><td class="tiny">Feature Service</td><td class="mono tiny">services.arcgis.com/P3ePLMYs2RvChkJx</td></tr>
-      <tr><td>Living Atlas · World Cities</td><td class="tiny">Feature Service</td><td class="mono tiny">services.arcgis.com/P3ePLMYs2RvChkJx</td></tr>
-    </tbody></table>
-    <div class="sec">Como restaurar o ArcGIS</div>
-    <ol style="margin:0;padding-left:17px;font-size:12px;line-height:1.7;color:var(--muted)">
-      <li>Baixe este arquivo e abra-o diretamente no navegador, ou publique-o em um servidor — fora de um contêiner com política restritiva, o SDK e os basemaps carregam normalmente.</li>
-      <li>Libere <span class="mono">js.arcgis.com</span>, <span class="mono">services.arcgisonline.com</span> e <span class="mono">services.arcgis.com</span> na política de conteúdo e no proxy.</li>
-      <li>Nada precisa ser configurado além disso: não há chave, conta de desenvolvedor ou consumo de créditos em nenhum ponto da aplicação.</li>
-    </ol>
-    <div class="sec">Impacto no mockup</div>
-    <table class="tbl"><thead><tr><th>Recurso</th><th>Contingência</th></tr></thead><tbody>
-      <tr><td>Camadas temáticas e visibilidade</td><td><span class="tag g">Mantido</span></td></tr>
-      <tr><td>Seleção, drill-down e sincronismo mapa ↔ tabela</td><td><span class="tag g">Mantido</span></td></tr>
-      <tr><td>Navegação, destaque e pulsação de eventos críticos</td><td><span class="tag g">Mantido</span></td></tr>
-      <tr><td>Basemap de serviço aberto</td><td>${imgBlocked?'<span class="tag y">Base local</span>':'<span class="tag g">Mantido</span>'}</td></tr>
-      <tr><td>Clusterização e popups nativos do SDK</td><td><span class="tag y">Simplificado</span></td></tr>
-      <tr><td>Living Atlas, Spatial Analyst e Network Analyst</td><td><span class="tag r">Indisponível</span></td></tr>
-    </tbody></table>`,
-    `<button class="btn" onclick="modalClose()">Fechar</button>
-     <button class="btn primary" onclick="modalClose();GEO.retry()">Tentar carregar novamente</button>`,'wide');
 }
 /* ============================================================
    SHELL — navegação, filtros globais, painéis e roteador
@@ -1873,7 +1589,7 @@ function renderNav(){
         <div class="row"><span>Dados</span><b>${fmtN(companies.length+projects.length)} objetos</b></div>
       </div>`;
   $$('#side [data-go]').forEach(b=> b.onclick=()=>go(b.dataset.go));
-  const sf=$('#sfGeo'); if(sf) sf.textContent = GEO.mode==='fallback'?'contingência': GEO.mode==='arcgis'?'SDK 4.31 ativo':'carregando…';
+  const sf=$('#sfGeo'); if(sf) sf.textContent = GEO.mode==='arcgis'?'SDK 5.1 ativo': GEO.mode==='error'?'indisponível':'carregando…';
 }
 
 function renderFilters(){
@@ -2515,8 +2231,7 @@ function viewComercio(){
 }
 function afterComercio(){
   GEO.mount('mapCom'); GEO.profile('comercio'); bindMapChrome();
-  const world=(lng,lat)=>{ if(GEO.mode==='arcgis'&&GEO.view) GEO.view.goTo({center:[lng,lat],zoom:2},{duration:900}).catch(()=>{});
-    else if(GEO.mode==='fallback'){ FB.cx=lng; FB.cy=lat; FB.k=3.2; FB.draw(); } };
+  const world=(lng,lat)=>{ if(GEO.ready&&GEO.view){ try{ const p=GEO.view.goTo({center:[lng,lat],zoom:2},{duration:900}); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } };
   world(-20,5);
   $('#btnWorld') && ($('#btnWorld').onclick=()=>world(10,15));
   $$('[data-trade]').forEach(e=> e.onclick=(ev)=>{ if(ev.target.dataset.alt) return; openTrade(e.dataset.trade); });
@@ -2561,8 +2276,7 @@ function scoreTerritories(){
     t.gaps = Object.keys(w).filter(k=> t[k]<48).map(k=>WLAB[k]);
   });
   territories.sort((a,b)=>b.score-a.score);
-  if(GEO.mode==='fallback'){ GEO.redraw(); return; }
-  if(GEO.mode==='arcgis' && GEO.layers.territories && GEO.layers.territories.queryFeatures){
+  if(GEO.ready && GEO.layers.territories && GEO.layers.territories.queryFeatures){
     const l=GEO.layers.territories;
     l.queryFeatures().then(res=>{
       const upd=res.features.map(f=>{ const t=territories.find(x=>x.id===f.attributes.id);
@@ -3594,21 +3308,28 @@ function viewAdmin(){
         <td class="tiny">${esc(c[3])}</td><td class="mono tiny">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`,
       {tight:true})}
     <div class="grid">
-      ${card('ArcGIS — serviços abertos','nenhum recurso desta aplicação exige chave de API',
-        `<div class="notice" style="margin-bottom:10px"><div>A plataforma opera integralmente sobre <b>serviços públicos e gratuitos</b>: o SDK, os basemaps de <span class="mono">services.arcgisonline.com</span> e as camadas do Living Atlas em <span class="mono">services.arcgis.com</span>. Não há chave, conta de desenvolvedor nem consumo de créditos.</div></div>
+      ${card('ArcGIS — serviços abertos','ArcGIS Maps SDK for JavaScript 5.1 · nenhum recurso exige chave de API',
+        `<div class="notice" style="margin-bottom:10px"><div>A plataforma opera integralmente sobre <b>serviços públicos e gratuitos</b>: o SDK 5.1 em módulos ES, os basemaps de <span class="mono">services.arcgisonline.com</span> e as camadas do ArcGIS Living Atlas em <span class="mono">services.arcgis.com</span>. Não há chave, conta de desenvolvedor nem consumo de créditos.</div></div>
         <dl class="kv">
-          <dt>SDK</dt><dd>ArcGIS Maps SDK for JavaScript 4.31</dd>
-          <dt>Estado</dt><dd>${GEO.mode==='arcgis'?'<span class="tag g">SDK ativo</span>':GEO.mode==='fallback'?'<span class="tag r">Contingência</span>':'<span class="tag y">Carregando</span>'} <button class="btn sm ghost" onclick="geoDiag()">diagnóstico</button></dd>
+          <dt>SDK</dt><dd>ArcGIS Maps SDK for JavaScript 5.1 (ESM)</dd>
+          <dt>Estado</dt><dd>${GEO.mode==='arcgis'?'<span class="tag g">MapView ativa</span>':GEO.mode==='error'?'<span class="tag r">Indisponível</span>':'<span class="tag y">Carregando</span>'}</dd>
           <dt>Basemap</dt><dd>${esc((GEO.BASEMAPS[GEO.basemapId]||{n:'—'}).n)}</dd>
-          <dt>Living Atlas</dt><dd>Países do Mundo · Cidades do Mundo</dd>
-          <dt>Camadas NIB</dt><dd>9 feature layers client-side</dd>
+          <dt>Camadas NIB</dt><dd>7 feature layers client-side + 2 graphics layers</dd>
+          <dt>Living Atlas</dt><dd>5 serviços publicados diretamente</dd>
           <dt>Autenticação</dt><dd><span class="tag g">Não requerida</span></dd>
         </dl>
+        <div class="sec">Serviços do Living Atlas publicados</div>
+        <div class="tblwrap" style="max-height:180px"><table class="tbl"><thead><tr><th>Camada</th><th>Tipo</th><th>Serviço</th></tr></thead><tbody>
+          <tr><td>Relevo sombreado</td><td class="tiny">Tile Layer</td><td class="mono tiny">Elevation/World_Hillshade</td></tr>
+          <tr><td>Países do Mundo</td><td class="tiny">Feature Layer</td><td class="mono tiny">World_Countries_Generalized</td></tr>
+          <tr><td>Divisões administrativas</td><td class="tiny">Feature Layer</td><td class="mono tiny">World_Administrative_Divisions</td></tr>
+          <tr><td>Cidades do Mundo</td><td class="tiny">Feature Layer</td><td class="mono tiny">World_Cities</td></tr>
+          <tr><td>Transportes e rodovias</td><td class="tiny">Tile Layer</td><td class="mono tiny">Reference/World_Transportation</td></tr>
+        </tbody></table></div>
         <div class="sec">Domínios que precisam estar liberados</div>
         <div class="wrap">
           <span class="cite">js.arcgis.com</span><span class="cite">services.arcgisonline.com</span>
-          <span class="cite">services.arcgis.com</span><span class="cite">tile.openstreetmap.org</span></div>
-        <div class="notice warn" style="margin-top:10px"><div>Caso, no futuro, algum serviço premium seja incorporado — geocodificação em lote, roteamento ou análises hospedadas — a credencial deve vir de variável de ambiente e cofre de segredos, nunca do repositório ou do código do cliente.</div></div>`)}
+          <span class="cite">services.arcgis.com</span></div>`)}
       ${card('Segurança e governança','perfis, trilha e regras',
         `<div class="tblwrap"><table class="tbl"><thead><tr><th>Perfil</th><th>Escopo</th><th>Decisão</th></tr></thead><tbody>
           <tr><td>Secretaria-Executiva</td><td class="tiny">Nacional · todas as missões</td><td><span class="tag g">Decide</span></td></tr>
@@ -4175,7 +3896,8 @@ function render(){
   $('#viewTitle').textContent=meta[0];
   $('#crumb').innerHTML=meta[1].replace(/›/g,'<span style="opacity:.5">›</span>');
   $('#subactions').innerHTML=subActions();
-  $('#viewport').innerHTML=v[0]();
+  GEO.park();                       // retira o host do DOM que será descartado
+  $('#viewport').innerHTML=v[0]();  // o módulo ativo o remonta em seu próprio quadro
   try{ v[1](); }catch(e){ console.warn('after()',e); }
   renderNav();
   $('#alertCount').textContent=alerts.filter(a=>a.open).length;
