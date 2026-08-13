@@ -105,10 +105,11 @@ button{cursor:pointer;border:none;background:none}
 #viewport{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 16px 40px;position:relative}
 
 /* ---------- primitives ---------- */
-.grid{display:grid;gap:12px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column;min-width:0}
-.card-h{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#FAFCFE)}
-.card-h h3{margin:0;font-family:var(--ff-d);font-size:13.5px;font-weight:600;letter-spacing:.3px;color:var(--navy)}
+.grid{display:grid;gap:12px;min-width:0}
+.grid > *{min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column;min-width:0;position:relative;z-index:0}
+.card-h{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#FAFCFE);flex-wrap:wrap}
+.card-h h3{margin:0;font-family:var(--ff-d);font-size:13.5px;font-weight:600;letter-spacing:.3px;color:var(--navy);min-width:0}
 .card-h .sub{font-size:10.5px;color:var(--faint);font-family:var(--ff-m)}
 .card-h .right{margin-left:auto;display:flex;align-items:center;gap:6px}
 .card-b{padding:12px;flex:1;min-height:0}
@@ -201,23 +202,23 @@ table.tbl tbody tr.sel{background:var(--tech-soft);box-shadow:inset 2px 0 0 var(
 .logbox::-webkit-scrollbar-thumb{background:#23405D;background-clip:content-box}
 
 /* map */
-.map-slot{position:relative;background:var(--surface3);min-height:260px;overflow:hidden}
+.map-slot{position:relative;background:var(--surface3);min-height:260px;overflow:hidden;isolation:isolate;contain:paint}
 #geoHost{position:absolute;inset:0;display:none}
 .map-overlay{position:absolute;z-index:5;pointer-events:none}
-.map-legend{left:10px;bottom:10px;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;box-shadow:var(--sh);pointer-events:auto;max-width:210px}
+.map-legend{left:10px;bottom:10px;max-height:calc(100% - 20px);overflow:auto;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;box-shadow:var(--sh);pointer-events:auto;max-width:210px}
 .map-legend .eyebrow{margin-bottom:5px}
 .lg{display:flex;align-items:center;gap:7px;padding:1.5px 0}
 .lg i{width:9px;height:9px;border-radius:50%;display:block;border:1px solid rgba(0,0,0,.18)}
 .lg i.sq{border-radius:2px}
 .lg i.ln{width:14px;height:3px;border-radius:2px}
-.map-layers{right:10px;top:10px;background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);pointer-events:auto;width:224px;overflow:hidden}
+.map-layers{right:10px;top:10px;background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);pointer-events:auto;width:224px;max-width:calc(100% - 20px);max-height:calc(100% - 20px);overflow:hidden;display:flex;flex-direction:column}
 .map-layers .hd{padding:7px 9px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;background:#FAFCFE}
-.map-layers .bd{max-height:230px;overflow-y:auto;padding:3px 0}
+.map-layers .bd{flex:1;min-height:0;max-height:230px;overflow-y:auto;padding:3px 0}
 .lyr{display:flex;align-items:center;gap:7px;padding:4px 9px;font-size:11.5px}
 .lyr:hover{background:#F3F8FC}
 .lyr input{accent-color:var(--tech);margin:0}
 .lyr .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.map-stat{left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:60%}
+.map-stat{left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 250px)}
 .mchip{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:var(--r);padding:3px 8px;font-size:11px;box-shadow:var(--sh);pointer-events:auto;display:flex;align-items:center;gap:6px}
 .mchip b{font-family:var(--ff-d);font-size:12px;color:var(--navy)}
 .geo-fallback{position:absolute;inset:0;background:#DCE6EE;display:flex;align-items:center;justify-content:center}
@@ -325,7 +326,7 @@ table.tbl tbody tr.sel{background:var(--tech-soft);box-shadow:inset 2px 0 0 var(
 .agent.running .prog > i{background:#6E4FBF}
 
 /* graph / svg */
-svg.chart{display:block;width:100%;height:auto;overflow:visible}
+svg.chart{display:block;width:100%;height:auto;margin:0 auto;overflow:visible}
 svg text{font-family:var(--ff-b);fill:var(--muted)}
 svg .axis{stroke:var(--line);stroke-width:1}
 svg .gl{stroke:#EDF1F6;stroke-width:1}
@@ -380,8 +381,22 @@ svg .val{font-family:var(--ff-m);font-size:10px;fill:var(--muted)}
 .bp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-top:8px}
 .bp-grid ul{margin:5px 0 0;padding-left:15px;font-size:11.5px;color:var(--muted)}
 .bp-grid li{margin-bottom:2px}
+/* grades: os módulos declaram colunas fixas inline; abaixo destes limites
+   a plataforma reflui para colunas fluidas sem quebrar os frames */
+@media (max-width:1560px){
+  #viewport > .grid, #viewport > .grid > .grid{grid-template-columns:repeat(auto-fit,minmax(360px,1fr)) !important}
+}
 @media (max-width:1240px){
   .kpis{grid-template-columns:repeat(2,1fr)}
+  #viewport > .grid, #viewport > .grid > .grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr)) !important}
+  .modal-b > .grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr)) !important}
+}
+@media (max-width:820px){
+  #viewport > .grid, #viewport > .grid > .grid{grid-template-columns:1fr !important}
+  .kpis{grid-template-columns:1fr}
+  .form,.form.c3{grid-template-columns:1fr}
+  .card-b .grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) !important}
+  #toasts{width:auto;left:12px;right:12px}
 }
 @media (max-width:900px){
   #shell{grid-template-columns:56px 1fr;--side:56px}
@@ -869,7 +884,7 @@ function chBar(items,o={}){
     g+=`<text class="lbl" x="${pl+i*bw+bw/2}" y="${H-9}" text-anchor="middle">${esc((d.l||'').slice(0,o.cut||8))}</text>`;
     if(o.showVal) g+=`<text class="val" x="${pl+i*bw+bw/2}" y="${y-3}" text-anchor="middle">${o.fmt?o.fmt(d.v):d.v}</text>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chGroup(items,series,o={}){
   const W=o.w||460,H=o.h||170,pl=40,pr=8,pt=12,pb=30;
@@ -884,7 +899,7 @@ function chGroup(items,series,o={}){
     });
     g+=`<text class="lbl" x="${pl+i*gw+gw/2}" y="${H-10}" text-anchor="middle">${esc(d.l)}</text>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`
     +`<div class="legend-row">${series.map(s=>`<span class="li"><i style="background:${s.c}"></i>${s.n}</span>`).join('')}</div>`;
 }
 function chLine(series,labels,o={}){
@@ -901,7 +916,7 @@ function chLine(series,labels,o={}){
     g+=`<polyline points="${pts}" fill="none" stroke="${s.c}" stroke-width="${s.w||2}" stroke-dasharray="${s.dash||''}" stroke-linejoin="round" stroke-linecap="round"/>`;
     if(s.dots!==false) s.v.forEach((v,i)=> g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.6" fill="#fff" stroke="${s.c}" stroke-width="1.6"><title>${esc(s.n)} · ${labels[i]}: ${o.fmt?o.fmt(v):v}</title></circle>`);
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`
     +`<div class="legend-row">${series.map(s=>`<span class="li"><i style="background:${s.c}"></i>${s.n}</span>`).join('')}</div>`;
 }
 function chDonut(items,o={}){
@@ -936,7 +951,7 @@ function chRadar(axes,series,o={}){
     g+=`<polygon points="${pts}" fill="${s.c}" fill-opacity=".16" stroke="${s.c}" stroke-width="2"/>`;
     s.v.forEach((v,i)=>{const a=-Math.PI/2+i*2*Math.PI/n, rr=r*clamp(v,0,100)/100; g+=`<circle cx="${cx+rr*Math.cos(a)}" cy="${cy+rr*Math.sin(a)}" r="2.4" fill="${s.c}"><title>${esc(axes[i])}: ${v}</title></circle>`;});
   });
-  return `<svg class="chart" viewBox="0 0 ${S} ${S+6}">${g}</svg>`
+  return `<svg class="chart" viewBox="0 0 ${S} ${S+6}" style="max-width:${S}px">${g}</svg>`
     +(series.length>1?`<div class="legend-row">${series.map(s=>`<span class="li"><i style="background:${s.c}"></i>${s.n}</span>`).join('')}</div>`:'');
 }
 function chSankey(cols,links,o={}){
@@ -967,7 +982,7 @@ function chSankey(cols,links,o={}){
     const x1=a.x+cw, x2=b.x, mx=(x1+x2)/2;
     g+=`<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2} L${x2},${y2+hb} C${mx},${y2+hb} ${mx},${y1+ha} ${x1},${y1+ha} Z" fill="${a.c}" opacity=".22"><title>${o.fmt?o.fmt(lk.v):lk.v}</title></path>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chWaterfall(items,o={}){
   const W=o.w||560,H=o.h||190,pl=48,pr=8,pt=12,pb=42;
@@ -984,7 +999,7 @@ function chWaterfall(items,o={}){
     g+=`<text class="lbl" x="${pl+i*bw+bw/2}" y="${H-24}" text-anchor="middle">${esc(b.d.l.split(' ')[0])}</text>`;
     g+=`<text class="lbl" x="${pl+i*bw+bw/2}" y="${H-12}" text-anchor="middle">${esc(b.d.l.split(' ').slice(1).join(' ').slice(0,12))}</text>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chFunnel(items,o={}){
   const W=o.w||420,H=o.h||(items.length*26+10);
@@ -995,7 +1010,7 @@ function chFunnel(items,o={}){
     g+=`<text class="lbl" x="106" y="${y+13}" text-anchor="end">${esc(d.l)}</text>`;
     g+=`<text class="val" x="${118+Math.max(2,w)}" y="${y+13}">${o.fmt?o.fmt(d.v):d.v}</text>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chGantt(tasks,o={}){
   const W=o.w||600,H=tasks.length*24+30, pl=150, months=o.months||14;
@@ -1008,7 +1023,7 @@ function chGantt(tasks,o={}){
     g+=`<rect x="${x}" y="${y+3}" width="${w*(t.p||0)/100}" height="13" rx="2.5" fill="${t.c||'#176B9A'}"><title>${esc(t.l)} — ${t.p||0}%</title></rect>`;
     if(t.mile) g+=`<path d="M${x+w},${y+9.5} l6,-6 l6,6 l-6,6 Z" fill="#D5A932"/>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chHeat(rows,cols,vals,o={}){
   const cw=o.cw||30, rh=o.rh||22, pl=o.pl||96, pt=32;
@@ -1024,7 +1039,7 @@ function chHeat(rows,cols,vals,o={}){
       if(v>0) g+=`<text x="${pl+j*cw+cw/2}" y="${pt+i*rh+rh/2+3.5}" text-anchor="middle" style="font-family:var(--ff-m);font-size:9px;fill:${t>.55?'#fff':'#5A6B80'}">${v}</text>`;
     });
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chPareto(items,o={}){
   const W=o.w||520,H=o.h||180,pl=38,pr=34,pt=12,pb=44;
@@ -1039,7 +1054,7 @@ function chPareto(items,o={}){
   g+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#D96B32" stroke-width="1.8"/>`;
   pts.forEach(p=>{const[a,b]=p.split(','); g+=`<circle cx="${a}" cy="${b}" r="2.4" fill="#D96B32"/>`});
   [0,50,100].forEach(v=> g+=`<text class="val" x="${W-pr+4}" y="${pt+ih-ih*v/100+3}">${v}%</text>`);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chTornado(items,o={}){
   const W=o.w||460, rh=22, H=items.length*rh+16, cx=W*0.52, half=W*0.4;
@@ -1052,12 +1067,12 @@ function chTornado(items,o={}){
     g+=`<rect x="${cx}" y="${y}" width="${wh}" height="13" rx="2" fill="#D96B32" opacity=".85"><title>${esc(d.l)} alto: ${d.hi}</title></rect>`;
     g+=`<text class="lbl" x="6" y="${y+10}">${esc(d.l)}</text>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chBullet(v,target,max,o={}){
   const W=o.w||190,H=o.h||16;
   const c = v/target>=1?'#168A69': v/target>.8?'#D5A932':'#D96B32';
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="width:${W}px">
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">
     <rect x="0" y="4" width="${W}" height="8" rx="4" fill="#E8EDF3"/>
     <rect x="0" y="4" width="${W*clamp(v/max,0,1)}" height="8" rx="4" fill="${c}"/>
     <line x1="${W*clamp(target/max,0,1)}" y1="1" x2="${W*clamp(target/max,0,1)}" y2="15" stroke="#14345B" stroke-width="2"/>
@@ -1097,7 +1112,7 @@ function chGraph(nodes,links,o={}){
     if(n.sub) g+=`<text x="${p.x}" y="${p.y+3.5}" text-anchor="middle" style="font-size:9.5px;font-family:var(--ff-m);fill:#fff">${esc(n.sub)}</text>`;
     g+=`<title>${esc(n.tip||n.l)}</title></g>`;
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
 }
 function chTimeline(items,o={}){
   return `<div class="steps">${items.map((it,i)=>`<div class="step ${it.state||''}">
@@ -1132,7 +1147,7 @@ const bus = {
    ============================================================ */
 const GEO = {
   ready:false, view:null, map:null, layers:{}, mods:null, host:null, pulseTimer:null,
-  apiKey:'', failed:false, mode:'loading', diag:[], sources:[
+  failed:false, mode:'loading', diag:[], basemapId:'gray', diag_img:false, sources:[
     {n:'js.arcgis.com · 4.31', js:'https://js.arcgis.com/4.31/', css:'https://js.arcgis.com/4.31/esri/themes/light/main.css'},
     {n:'js.arcgis.com · 4.30', js:'https://js.arcgis.com/4.30/', css:'https://js.arcgis.com/4.30/esri/themes/light/main.css'},
     {n:'js.arcgis.com · 4.29', js:'https://js.arcgis.com/4.29/', css:'https://js.arcgis.com/4.29/esri/themes/light/main.css'}
@@ -1140,7 +1155,9 @@ const GEO = {
   init(){
     this.host = document.getElementById('geoHost');
     this.diag=[]; this.mode='loading';
-    if(this.host) this.host.innerHTML=`<div style="position:absolute;inset:0;display:grid;place-items:center;background:#DEE7EF">
+    clearTimeout(this._deadline);
+    this._deadline = setTimeout(()=>{ if(this.mode==='loading') this.fallback('Tempo total excedido sem resposta do serviço'); }, 26000);
+    if(this.host) this.host.innerHTML=`<div data-geo-placeholder style="position:absolute;inset:0;display:grid;place-items:center;background:#DEE7EF">
       <div style="text-align:center;font-family:var(--ff-d);font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#5A6B80">
         <div style="width:26px;height:26px;margin:0 auto 8px;border:2px solid #B9CCDD;border-top-color:#176B9A;border-radius:50%;animation:spin 1s linear infinite"></div>
         Conectando ao serviço geoespacial</div></div>`;
@@ -1164,25 +1181,28 @@ const GEO = {
   },
   loadModules(){
     const modList = ["esri/config","esri/Map","esri/views/MapView","esri/layers/FeatureLayer","esri/layers/GraphicsLayer",
-      "esri/Graphic","esri/geometry/Point","esri/geometry/Polyline","esri/geometry/Extent"];
+      "esri/Graphic","esri/geometry/Point","esri/geometry/Polyline","esri/geometry/Extent",
+      "esri/Basemap","esri/layers/TileLayer"];
     let done=false;
     const guard = setTimeout(()=>{ if(!done) this.fallback('Tempo excedido ao resolver os módulos do SDK'); }, 15000);
     try{
-      require(modList, (esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent)=>{
-        done=true; clearTimeout(guard);
-        this.mods={esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent};
+      require(modList, (esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent,Basemap,TileLayer)=>{
+        done=true; clearTimeout(guard); clearTimeout(this._deadline);
+        this.mods={esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent,Basemap,TileLayer};
         this.diag.push('módulos esri resolvidos');
         try{ this.build(); this.mode='arcgis'; }catch(e){ console.error(e); this.fallback('Falha ao construir as camadas: '+e.message); }
       }, err=>{ done=true; clearTimeout(guard); this.fallback('Erro ao resolver módulos: '+(err&&err.message||'desconhecido')); });
     }catch(e){ this.fallback('Erro ao inicializar o SDK: '+e.message); }
   },
-  retry(){ this.failed=false; this.ready=false; this.mode='loading'; this.host.innerHTML=''; this.sources.forEach(()=>{}); this.tryLoad(0);
+  retry(){
+    const prev=this.diag.slice();
+    this.failed=false; this.ready=false; FB.built=false; FB.bound=false; FB.tiles={}; FB.tileOK=false; FB.tileFail=0; FB.tilesOn=true; FB.srcIdx=0;
+    this.init(); this.diag = prev.concat(['— nova tentativa —'], this.diag);
     toast('info','Reconectando ao ArcGIS','Nova tentativa de carregamento do SDK em andamento.'); },
   sym(color,size,outline){ return {type:'simple-marker',style:'circle',color,size,outline:{color:outline||[255,255,255,.9],width:1}}; },
 
   build(){
     const {esriConfig,Map,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,Polyline,Extent}=this.mods;
-    if(this.apiKey) esriConfig.apiKey=this.apiKey;
     esriConfig.request.timeout = 20000;
 
     /* ---- camadas client-side (dados NIB simulados) ---- */
@@ -1311,13 +1331,14 @@ const GEO = {
       renderer:{type:'simple',symbol:this.sym([62,87,114,.75],5,[255,255,255,.9])}
     });
 
-    this.map = new Map({ basemap: this.apiKey? 'arcgis/light-gray' : 'osm', layers:[
+    this.map = new Map({ basemap: this.openBasemap('gray'), layers:[
       this.layers.la_countries, this.layers.la_cities, this.layers.flows,
       this.layers.companies, this.layers.infra, this.layers.territories,
       this.layers.projects, this.layers.inspections, this.layers.alerts,
       this.layers.highlight, this.layers.pulse
     ]});
 
+    if(this.host) this.host.innerHTML='';   // remove o placeholder antes de ceder o container ao SDK
     this.view = new MapView({
       container:this.host, map:this.map,
       center:[-52.5,-14.5], zoom:4,
@@ -1327,7 +1348,9 @@ const GEO = {
     });
 
     this.view.when(()=>{
-      this.ready=true;
+      this.ready=true; this.mode='arcgis';
+      const ph=this.host.querySelector('[data-geo-placeholder]'); if(ph) ph.remove();
+      this.diag.push('MapView pronto · basemap '+((this.BASEMAPS[this.basemapId]||{}).n||'—'));
       bus.emit('geo:ready');
       // clique no mapa sincroniza o painel contextual (RF-02 / RF-03)
       this.view.on('click', ev=>{
@@ -1351,6 +1374,8 @@ const GEO = {
   },
 
   fallback(msg){
+    if(this.mode==='fallback') return;
+    clearTimeout(this._deadline);
     this.failed=true; this.mode='fallback'; this.diag.push('contingência ativada: '+msg);
     FB.build(msg);
     this.ready=true;
@@ -1449,11 +1474,30 @@ const GEO = {
       if(crit.length) this.pulseAt(crit[Math.floor(Math.random()*crit.length)]);
     }, 9000);
   },
-  setKey(k){
-    this.apiKey=k;
-    if(this.ready&&this.mods){ this.mods.esriConfig.apiKey=k; try{ this.map.basemap = k? 'arcgis/light-gray':'osm'; }catch(e){} }
+  /* Basemaps abertos — serviços públicos da Esri e OpenStreetMap.
+     Nenhum exige chave de API, conta de desenvolvedor ou consumo de créditos. */
+  BASEMAPS:{
+    gray:{n:'Esri · World Light Gray Canvas', url:'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer',
+          ref:'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer'},
+    topo:{n:'Esri · World Topographic', url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer'},
+    imagery:{n:'Esri · World Imagery', url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'},
+    physical:{n:'Esri · World Physical Map', url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer'},
+    osm:{n:'OpenStreetMap', osm:true}
   },
-  setBasemap(b){ if(this.ready){ try{ this.map.basemap=b; }catch(e){ toast('warn','Basemap indisponível','Este basemap exige uma chave de API ArcGIS válida.'); } } }
+  openBasemap(id){
+    const {Basemap,TileLayer}=this.mods, b=this.BASEMAPS[id]||this.BASEMAPS.gray;
+    if(b.osm) return 'osm';
+    const layers=[new TileLayer({url:b.url})];
+    if(b.ref) layers.push(new TileLayer({url:b.ref}));
+    return new Basemap({baseLayers:layers, title:b.n, id:'open-'+id});
+  },
+  setBasemap(id){
+    this.basemapId=id;
+    if(this.mode==='fallback'){ FB.setSource(id); return; }
+    if(!this.ready) return;
+    try{ this.map.basemap=this.openBasemap(id); }
+    catch(e){ toast('warn','Basemap indisponível','Não foi possível carregar o serviço de base neste ambiente.'); }
+  }
 };
 
 /* ============================================================
@@ -1473,9 +1517,42 @@ const BR_OUTLINE = [
  [3.9,-63.3],[5.2,-60.7]
 ];
 const FB = {
-  cx:-52.5, cy:-14.5, k:null, hl:[], pulse:[], msg:'', W:800, H:400, bound:false,
+  z:4, cx:-52.5, cy:-14.5, hl:[], pulse:[], msg:'', W:800, H:400, bound:false, built:false,
+  tiles:{}, tileOK:false, tileFail:0, srcIdx:0, tilesOn:true, raf:null,
+  /* mesmas bases abertas do modo SDK, servidas por requisição de imagem */
+  SRC:[
+    {id:'gray', n:'Esri · World Light Gray Canvas', a:'Esri, HERE, Garmin, © OpenStreetMap contributors',
+     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${z}/${y}/${x}`},
+    {id:'topo', n:'Esri · World Topographic', a:'Esri, USGS, NGA, NASA, © OpenStreetMap contributors',
+     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${z}/${y}/${x}`},
+    {id:'imagery', n:'Esri · World Imagery', a:'Esri, Maxar, Earthstar Geographics',
+     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`},
+    {id:'physical', n:'Esri · World Physical Map', a:'Esri, U.S. National Park Service',
+     u:(z,x,y)=>`https://services.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/${z}/${y}/${x}`},
+    {id:'osm', n:'OpenStreetMap', a:'© OpenStreetMap contributors',
+     u:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`}
+  ],
+  setSource(id){
+    const i=this.SRC.findIndex(s=>s.id===id); if(i<0) return;
+    this.srcIdx=i; this.tiles={}; this.tileOK=false; this.tileFail=0;
+    const c=document.getElementById('fbTiles'); if(c) c.innerHTML='';
+    this.draw();
+  },
   rgb(c){ if(!c) return null; if(typeof c==='string') return c;
     return `rgba(${c[0]},${c[1]},${c[2]},${c[3]!=null?c[3]:1})`; },
+
+  /* --- projeção Web Mercator (compatível com o esquema de tiles) --- */
+  world(){ return 256*Math.pow(2,this.z); },
+  px(lng){ return (lng+180)/360*this.world(); },
+  py(lat){ const s=Math.sin(clamp(lat,-85.05,85.05)*Math.PI/180);
+    return (0.5 - Math.log((1+s)/(1-s))/(4*Math.PI))*this.world(); },
+  lngAt(px){ return px/this.world()*360-180; },
+  latAt(py){ const n=Math.PI*(1-2*py/this.world()); return Math.atan(Math.sinh(n))*180/Math.PI; },
+  ox(){ return this.px(this.cx)-this.W/2; },
+  oy(){ return this.py(this.cy)-this.H/2; },
+  X(lng){ return this.px(lng)-this.ox(); },
+  Y(lat){ return this.py(lat)-this.oy(); },
+
   build(msg){
     this.msg=msg||'';
     const mk=(id,title,visible)=>({id,title,visible:!!visible,__fb:true});
@@ -1490,33 +1567,122 @@ const FB = {
       la_countries:Object.assign(mk('la_countries','Living Atlas · Países do Mundo',false),{__err:true}),
       la_cities:Object.assign(mk('la_cities','Living Atlas · Cidades do Mundo',false),{__err:true})
     };
-    this.bindHost();
-    this.draw();
+    this.mountDom(); this.bindHost(); this.draw();
+  },
+  mountDom(){
+    const h=GEO.host; if(!h) return;
+    h.innerHTML = `<div id="fbTiles" style="position:absolute;inset:0;overflow:hidden;background:#DEE7EF"></div>
+      <svg id="fbSvg" style="position:absolute;inset:0;width:100%;height:100%;display:block"></svg>
+      <div id="fbAttr" style="position:absolute;right:6px;bottom:5px;font-family:var(--ff-m);font-size:9px;color:#3E5772;background:rgba(255,255,255,.82);padding:1px 6px;border-radius:3px;pointer-events:none"></div>`;
+    this.built=true;
   },
   bindHost(){
     const h=GEO.host; if(!h||this.bound) return; this.bound=true;
     h.style.cursor='grab';
     let drag=null;
-    h.addEventListener('mousedown',e=>{ drag={x:e.clientX,y:e.clientY,cx:this.cx,cy:this.cy}; h.style.cursor='grabbing'; });
-    window.addEventListener('mouseup',()=>{ drag=null; h.style.cursor='grab'; });
-    window.addEventListener('mousemove',e=>{ if(!drag||!this.k) return;
-      this.cx=drag.cx-(e.clientX-drag.x)/this.k; this.cy=drag.cy+(e.clientY-drag.y)/this.k; this.draw(); });
-    h.addEventListener('wheel',e=>{ e.preventDefault(); this.k=clamp((this.k||6)*(e.deltaY<0?1.18:0.85),1.5,180); this.draw(); },{passive:false});
+    h.addEventListener('mousedown',e=>{ drag={x:e.clientX,y:e.clientY,ox:this.ox(),oy:this.oy(),moved:false}; h.style.cursor='grabbing'; e.preventDefault(); });
+    window.addEventListener('mouseup',()=>{ if(drag) setTimeout(()=>{drag=null;},0); h.style.cursor='grab'; });
+    window.addEventListener('mousemove',e=>{
+      if(!drag) return;
+      drag.moved=true;
+      const nx=drag.ox-(e.clientX-drag.x), ny=drag.oy-(e.clientY-drag.y);
+      this.cx=this.lngAt(nx+this.W/2); this.cy=this.latAt(ny+this.H/2);
+      this.schedule();
+    });
+    h.addEventListener('wheel',e=>{
+      e.preventDefault();
+      const r=h.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+      const lng=this.lngAt(this.ox()+mx), lat=this.latAt(this.oy()+my);
+      const nz=clamp(this.z+(e.deltaY<0?1:-1),2,16);
+      if(nz===this.z) return;
+      this.z=nz;
+      const nox=this.px(lng)-mx, noy=this.py(lat)-my;
+      this.cx=this.lngAt(nox+this.W/2); this.cy=this.latAt(noy+this.H/2);
+      this.tiles={}; const c=document.getElementById('fbTiles'); if(c) c.innerHTML='';
+      this.schedule();
+    },{passive:false});
     h.addEventListener('click',e=>{
+      if(drag&&drag.moved) return;
       const t=e.target.closest('[data-fb]'); if(!t) return;
-      const [kind,oid]=t.dataset.fb.split('|');
+      const i=t.dataset.fb.indexOf('|'), kind=t.dataset.fb.slice(0,i), oid=t.dataset.fb.slice(i+1);
       ({companies:openCompany,projects:openProject,alerts:openAlert,territories:openTerritory,inspections:openInspection}[kind]||(()=>{}))(oid);
     });
-    if(window.ResizeObserver){ new ResizeObserver(()=>this.draw()).observe(h); }
+    if(window.ResizeObserver){ try{ new ResizeObserver(()=>this.schedule()).observe(h); }catch(e){} }
   },
-  fit(){ const h=GEO.host; this.W=h.clientWidth||800; this.H=h.clientHeight||400;
-    if(!this.k) this.k = Math.min(this.W/46, this.H/40); },
-  X(lng){ return this.W/2+(lng-this.cx)*this.k; },
-  Y(lat){ return this.H/2-(lat-this.cy)*this.k; },
-  goTo(t,zoom){ this.cx=t.lng; this.cy=t.lat; this.k=clamp((zoom||8)*2.4,1.5,180); this.draw(); },
+  schedule(){ if(this.raf) return; this.raf=requestAnimationFrame(()=>{ this.raf=null; this.draw(); }); },
+  fit(){ const h=GEO.host; this.W=Math.max(120,h.clientWidth||800); this.H=Math.max(120,h.clientHeight||400); },
+  goTo(t,zoom){ this.cx=t.lng; this.cy=t.lat; if(zoom) this.z=clamp(Math.round(zoom),2,16); this.draw(); },
+  onTileError(img){
+    this.tileFail++;
+    img.style.display='none';
+    if(!this.tileOK && this.tileFail>=3){
+      if(this.srcIdx < this.SRC.length-1){
+        this.srcIdx++; this.tileFail=0; this.tiles={};
+        const c=document.getElementById('fbTiles'); if(c) c.innerHTML='';
+        GEO.diag.push(`tiles: alternando para ${this.SRC[this.srcIdx].n}`);
+        this.draw();
+      } else if(this.tilesOn){
+        this.tilesOn=false;
+        GEO.diag.push('tiles: imagens externas bloqueadas — base vetorial simplificada ativada');
+        this.draw();
+      }
+    }
+  },
+  onTileLoad(){ if(!this.tileOK){ this.tileOK=true; GEO.diag.push(`tiles: ${this.SRC[this.srcIdx].n} respondendo`); bus.emit('geo:tiles'); } },
+  drawTiles(){
+    const c=document.getElementById('fbTiles'); if(!c) return;
+    if(!this.tilesOn){
+      c.innerHTML=`<svg width="100%" height="100%" viewBox="0 0 ${this.W} ${this.H}" style="display:block">${this.vectorBase()}</svg>`;
+      const at0=document.getElementById('fbAttr'); if(at0) at0.textContent='Base cartográfica local · NIB Intelligence Hub';
+      return; }
+    const n=Math.pow(2,this.z), ox=this.ox(), oy=this.oy();
+    const x0=Math.floor(ox/256), x1=Math.floor((ox+this.W)/256);
+    const y0=clamp(Math.floor(oy/256),0,n-1), y1=clamp(Math.floor((oy+this.H)/256),0,n-1);
+    const keep={};
+    for(let x=x0;x<=x1;x++){
+      for(let y=y0;y<=y1;y++){
+        const wx=((x%n)+n)%n, key=`${this.z}/${wx}/${y}`;
+        keep[key]=1;
+        let el=this.tiles[key];
+        if(!el){
+          el=document.createElement('img');
+          el.src=this.SRC[this.srcIdx].u(this.z,wx,y);
+          el.alt=''; el.decoding='async'; el.draggable=false;
+          el.style.cssText='position:absolute;width:256px;height:256px;user-select:none;pointer-events:none';
+          el.onerror=()=>this.onTileError(el);
+          el.onload=()=>this.onTileLoad();
+          this.tiles[key]=el; c.appendChild(el);
+        }
+        el.style.left=(x*256-ox)+'px'; el.style.top=(y*256-oy)+'px';
+      }
+    }
+    Object.keys(this.tiles).forEach(k=>{ if(!keep[k]){ const e=this.tiles[k]; if(e&&e.parentNode) e.parentNode.removeChild(e); delete this.tiles[k]; } });
+    const at=document.getElementById('fbAttr');
+    if(at) at.textContent = this.SRC[this.srcIdx].a;
+  },
+  /* base cartográfica local: nenhum recurso externo, usada quando o ambiente
+     bloqueia também requisições de imagem */
+  vectorBase(){
+    let g=`<rect width="${this.W}" height="${this.H}" fill="#DCE7EF"/>`;
+    for(let lat=-40;lat<=15;lat+=5){ const y=this.Y(lat); if(y>-10&&y<this.H+10){
+      g+=`<line x1="0" y1="${y}" x2="${this.W}" y2="${y}" stroke="#CCDAE5"/>`;
+      if(this.z>=4) g+=`<text x="3" y="${y-2}" style="font-family:var(--ff-m);font-size:8px;fill:#93A8BC">${lat}°</text>`; } }
+    for(let lng=-80;lng<=-25;lng+=5){ const x=this.X(lng); if(x>-10&&x<this.W+10){
+      g+=`<line x1="${x}" y1="0" x2="${x}" y2="${this.H}" stroke="#CCDAE5"/>`;
+      if(this.z>=4) g+=`<text x="${x+3}" y="10" style="font-family:var(--ff-m);font-size:8px;fill:#93A8BC">${lng}°</text>`; } }
+    const path=BR_OUTLINE.map(p=>`${this.X(p[1]).toFixed(1)},${this.Y(p[0]).toFixed(1)}`).join(' L');
+    g+=`<path d="M${path} Z" fill="#F2F6FA" stroke="#93A8BC" stroke-width="1.4"/>`;
+    if(this.z>=4) UFS.forEach(u=>{
+      const x=this.X(u.lng), y=this.Y(u.lat);
+      if(x<-20||y<-20||x>this.W+20||y>this.H+20) return;
+      g+=`<circle cx="${x}" cy="${y}" r="1.6" fill="#93A8BC"/>
+        <text x="${x+4}" y="${y+3}" style="font-family:var(--ff-d);font-size:${this.z>=6?10:9}px;letter-spacing:.5px;fill:#7C93A9">${this.z>=6?esc(u.name):u.uf}</text>`;
+    });
+    return g;
+  },
   pt(o,kind,shape,color,size,tip){
     const x=this.X(o.lng), y=this.Y(o.lat);
-    if(x<-30||y<-30||x>this.W+30||y>this.H+30) return '';
+    if(x<-40||y<-40||x>this.W+40||y>this.H+40) return '';
     const t=`<title>${esc(tip||'')}</title>`;
     const a=`data-fb="${kind}|${o.id}" style="cursor:pointer"`;
     if(shape==='sq') return `<rect ${a} x="${x-size/2}" y="${y-size/2}" width="${size}" height="${size}" rx="1" fill="${color}" stroke="#fff" stroke-width="1">${t}</rect>`;
@@ -1526,24 +1692,26 @@ const FB = {
   },
   draw(){
     const h=GEO.host; if(!h||h.style.display==='none') return;
+    if(!this.built || !document.getElementById('fbSvg')) this.mountDom();
     this.fit();
-    const L=GEO.layers, W=this.W, H=this.H;
-    let g=`<rect width="${W}" height="${H}" fill="#DEE7EF"/>`;
-    for(let lat=-35;lat<=10;lat+=5){ const y=this.Y(lat); if(y>0&&y<H) g+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#D2DDE7" stroke-width="1"/>`; }
-    for(let lng=-75;lng<=-30;lng+=5){ const x=this.X(lng); if(x>0&&x<W) g+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#D2DDE7" stroke-width="1"/>`; }
-    g+=`<path d="M${BR_OUTLINE.map(p=>`${this.X(p[1]).toFixed(1)},${this.Y(p[0]).toFixed(1)}`).join(' L')} Z" fill="#EFF4F8" stroke="#A9BFD0" stroke-width="1.2"/>`;
+    this.drawTiles();
+    const L=GEO.layers;
+    let g='';
     if(L.flows&&L.flows.visible) trade.slice(0,8).forEach(t=> t.orig.forEach(o=>{
-      g+=`<path d="M${this.X(clamp(o.lng,-78,-28))},${this.Y(clamp(o.lat,-38,12))} Q${this.X(-60)},${this.Y(-2)} ${this.X(-47.9)},${this.Y(-15.8)}" fill="none" stroke="${o.share>60?'#C53D45':'#176B9A'}" stroke-width="${Math.max(1,o.share/26)}" opacity=".5"/>`;
+      const ax=this.X(o.lng), ay=this.Y(clamp(o.lat,-80,80)), bx=this.X(-47.9), by=this.Y(-15.8);
+      g+=`<path d="M${ax},${ay} Q${(ax+bx)/2},${(ay+by)/2-Math.abs(bx-ax)*0.18} ${bx},${by}" fill="none"
+        stroke="${o.share>60?'#C53D45':'#176B9A'}" stroke-width="${Math.max(1,o.share/26)}" opacity=".55"/>`;
     }));
     if(L.infra&&L.infra.visible) infra.forEach(f=> g+=this.pt(f,'infra','dia',f.kind==='porto'?'#0E5A82':f.kind==='energia'?'#D5A932':'#3E5772',5,`${f.name} — ${f.note}`));
-    if(L.companies&&L.companies.visible) companies.forEach(c=> g+=this.pt(c,'companies','ci',SEVC[CHAIN_BY[c.chain].status],3.1,`${c.name} · ${c.uf}`));
+    if(L.companies&&L.companies.visible) companies.forEach(c=> g+=this.pt(c,'companies','ci',SEVC[CHAIN_BY[c.chain].status],this.z>6?4.2:3.1,`${c.name} · ${c.uf}`));
     if(L.territories&&L.territories.visible) territories.forEach(t=> g+=this.pt(t,'territories','ci',{A:'#168A69',B:'#176B9A',C:'#D5A932',D:'#96A5B4'}[t.cls]||'#96A5B4',t.cls==='A'?7:5,`${t.name} · classe ${t.cls} · score ${t.score}`));
     if(L.projects&&L.projects.visible) projects.forEach(p=> g+=this.pt(p,'projects','sq','#14345B',clamp(4+p.capex/4e8,4,12),`${p.id} · ${p.name} · ${fmtBRL(p.capex)}`));
     if(L.inspections&&L.inspections.visible) inspections.forEach(v=> g+=this.pt(v,'inspections','sq',{Validada:'#168A69',Concluída:'#176B9A','Em campo':'#D5A932',Programada:'#96A5B4'}[v.status],6,`${v.id} · ${v.status}`));
     if(L.alerts&&L.alerts.visible) alerts.filter(a=>a.open).forEach(a=> g+=this.pt(a,'alerts','tri',SEVC[a.sev],a.sev==='crit'?7:5.5,`${a.title} · ${a.uf}`));
     this.hl.forEach(m=>{
       const x=this.X(m.lng), y=this.Y(m.lat);
-      if(m.t==='ring') g+=`<circle cx="${x}" cy="${y}" r="${Math.max(10,(m.r||1)*this.k)}" fill="none" stroke="${m.c}" stroke-width="1.4" stroke-dasharray="5 4" opacity=".85"/>`;
+      if(m.t==='ring'){ const r=Math.abs(this.Y(m.lat+(m.r||1))-y);
+        g+=`<circle cx="${x}" cy="${y}" r="${Math.max(12,r)}" fill="none" stroke="${m.c}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".85"/>`; }
       else { g+=`<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="${m.c||'#176B9A'}" stroke-width="2.4"/>`;
         if(m.label) g+=`<text x="${x}" y="${y-18}" text-anchor="middle" style="font-family:var(--ff-d);font-size:10px;font-weight:600;fill:#14345B;paint-order:stroke;stroke:#fff;stroke-width:3">${esc(m.label)}</text>`; }
     });
@@ -1551,9 +1719,8 @@ const FB = {
       g+=`<circle cx="${x}" cy="${y}" r="6" fill="rgba(197,61,69,.2)" stroke="#C53D45" stroke-width="2">
         <animate attributeName="r" values="6;30;6" dur="2.2s" repeatCount="indefinite"/>
         <animate attributeName="opacity" values=".9;0;.9" dur="2.2s" repeatCount="indefinite"/></circle>`; });
-    h.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" style="display:block;background:#DEE7EF">${g}</svg>
-      <div style="position:absolute;right:8px;bottom:8px;font-family:var(--ff-m);font-size:9.5px;color:#5A6B80;background:rgba(255,255,255,.8);padding:2px 6px;border-radius:3px">
-        Modo de contingência · projeção simplificada · arraste e use a roda para navegar</div>`;
+    const svg=document.getElementById('fbSvg');
+    if(svg){ svg.setAttribute('viewBox',`0 0 ${this.W} ${this.H}`); svg.innerHTML=g; }
   }
 };
 
@@ -1565,12 +1732,7 @@ function mapChrome(opts={}){
     <div class="hd"><span class="eyebrow">Camadas ArcGIS</span><span class="tag b" style="margin-left:auto">SDK 4.31</span></div>
     <div class="bd" id="layerList"></div>
     <div class="hd" style="border-top:1px solid var(--line);border-bottom:none">
-      <select id="basemapSel" style="width:100%;border:1px solid var(--line);border-radius:3px;padding:3px 5px;font-size:11px">
-        <option value="osm">Basemap · OpenStreetMap (sem chave)</option>
-        <option value="arcgis/light-gray">ArcGIS · Light Gray (requer chave)</option>
-        <option value="arcgis/imagery">ArcGIS · Imagery (requer chave)</option>
-        <option value="arcgis/topographic">ArcGIS · Topográfico (requer chave)</option>
-      </select>
+      <select id="basemapSel" style="width:100%;border:1px solid var(--line);border-radius:3px;padding:3px 5px;font-size:11px"></select>
     </div>
   </div>
   <div class="map-overlay map-legend">
@@ -1589,7 +1751,7 @@ function bindMapChrome(){
     const st=$('#mapStat');
     if(st && !$('#fbChip')) st.insertAdjacentHTML('beforeend',
       `<div class="mchip" id="fbChip" style="border-color:#EFCBCE;background:#FDF5F5">
-        <span class="dotm beat" style="color:#C53D45"></span><b style="color:#C53D45">SDK bloqueado</b>
+        <span class="dotm beat" style="color:#C53D45"></span><b style="color:#C53D45">SDK bloqueado</b><span class="faint tiny">base raster</span>
         <button class="btn sm ghost" onclick="geoDiag()" style="height:18px;padding:0 5px">diagnóstico</button></div>`);
   }
   list.innerHTML = order.filter(k=>GEO.layers[k]).map(k=>{
@@ -1601,40 +1763,63 @@ function bindMapChrome(){
   }).join('');
   $$('#layerList input').forEach(i=> i.onchange=()=>{ GEO.layers[i.dataset.lyr].visible=i.checked; GEO.redraw(); });
   const bs=$('#basemapSel');
-  if(bs && GEO.mode==='fallback'){ bs.disabled=true; bs.innerHTML='<option>Basemap indisponível — modo de contingência</option>'; return; }
-  if(bs){ bs.value = GEO.apiKey? 'arcgis/light-gray':'osm'; bs.onchange=()=>{
-    if(bs.value!=='osm' && !GEO.apiKey){ toast('warn','Chave ArcGIS necessária','Informe a chave em Administração › Integrações para usar basemaps ArcGIS.'); bs.value='osm'; return; }
-    GEO.setBasemap(bs.value);
-  };}
+  if(bs){
+    if(GEO.mode==='fallback' && !FB.tilesOn){
+      bs.innerHTML='<option>Base cartográfica local — imagens externas bloqueadas</option>'; bs.disabled=true;
+    } else {
+      bs.disabled=false;
+      bs.innerHTML = Object.keys(GEO.BASEMAPS).map(k=>
+        `<option value="${k}" ${k===GEO.basemapId?'selected':''}>Base aberta · ${esc(GEO.BASEMAPS[k].n)}</option>`).join('');
+      bs.onchange=()=>GEO.setBasemap(bs.value);
+    }
+  }
 }
 
 /* diagnóstico do carregamento do SDK */
 function geoDiag(){
+  const imgBlocked = GEO.mode==='fallback' && !FB.tilesOn;
   modal('Serviço geoespacial','Diagnóstico do ArcGIS Maps SDK',`
     <div class="notice ${GEO.mode==='arcgis'?'':'crit'}" style="margin-bottom:12px"><div>
       <b>Estado atual: ${GEO.mode==='arcgis'?'ArcGIS Maps SDK ativo':'modo de contingência'}.</b>
-      ${GEO.mode==='arcgis'?'Todas as camadas, popups e análises espaciais estão operando sobre o SDK.'
-      :'O ambiente em que esta página está sendo exibida bloqueou o carregamento de <span class="mono">js.arcgis.com</span>. A plataforma continua funcional com um renderizador geoespacial próprio — camadas, seleção, navegação, destaque e pulsação de eventos permanecem ativos.'}
+      ${GEO.mode==='arcgis'
+        ? 'Todas as camadas, popups e análises espaciais operam sobre o SDK, usando exclusivamente serviços abertos.'
+        : (imgBlocked
+          ? 'Este ambiente bloqueou <b>scripts</b> de <span class="mono">js.arcgis.com</span> e também <b>requisições de imagem</b> para serviços externos. Nenhum recurso de rede sai desta página. A plataforma segue operando com base cartográfica local: camadas, seleção, navegação, destaque e pulsação de eventos permanecem ativos.'
+          : 'Este ambiente bloqueou o carregamento de scripts de <span class="mono">js.arcgis.com</span>. A base cartográfica continua vindo de serviços abertos da Esri por requisição de imagem.')}
+    </div></div>
+    <div class="notice" style="margin-bottom:12px"><div>
+      <b>Nenhum serviço desta aplicação exige chave de API.</b> O bloqueio observado é de política de conteúdo do ambiente, não de autenticação ou de créditos — os tempos de falha registrados abaixo, na casa de poucos milissegundos, são característicos de recusa por política e não de indisponibilidade do serviço.
     </div></div>
     <div class="sec">Tentativas de carregamento</div>
     <div class="logbox" style="height:150px;border-radius:4px">${GEO.diag.map(d=>`<div class="ln"><span class="ts">•</span> ${esc(d)}</div>`).join('')||'<div class="ln di">Sem registros.</div>'}</div>
+    <div class="sec">Serviços abertos utilizados — todos sem chave</div>
+    <table class="tbl"><thead><tr><th>Serviço</th><th>Tipo</th><th>Endpoint</th></tr></thead><tbody>
+      <tr><td>ArcGIS Maps SDK for JavaScript 4.31</td><td class="tiny">Biblioteca</td><td class="mono tiny">js.arcgis.com/4.31/</td></tr>
+      <tr><td>World Light Gray Canvas + Reference</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · Canvas/World_Light_Gray_Base</td></tr>
+      <tr><td>World Topographic Map</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · World_Topo_Map</td></tr>
+      <tr><td>World Imagery</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · World_Imagery</td></tr>
+      <tr><td>World Physical Map</td><td class="tiny">Basemap</td><td class="mono tiny">services.arcgisonline.com · World_Physical_Map</td></tr>
+      <tr><td>OpenStreetMap</td><td class="tiny">Basemap</td><td class="mono tiny">tile.openstreetmap.org</td></tr>
+      <tr><td>Living Atlas · World Countries Generalized</td><td class="tiny">Feature Service</td><td class="mono tiny">services.arcgis.com/P3ePLMYs2RvChkJx</td></tr>
+      <tr><td>Living Atlas · World Cities</td><td class="tiny">Feature Service</td><td class="mono tiny">services.arcgis.com/P3ePLMYs2RvChkJx</td></tr>
+    </tbody></table>
     <div class="sec">Como restaurar o ArcGIS</div>
     <ol style="margin:0;padding-left:17px;font-size:12px;line-height:1.7;color:var(--muted)">
-      <li>Baixe este arquivo e abra-o diretamente no navegador, ou publique-o em um servidor — fora de um contêiner com política restritiva, o SDK carrega normalmente.</li>
-      <li>Garanta que o domínio <span class="mono">js.arcgis.com</span> esteja liberado na política de conteúdo e no proxy da rede.</li>
-      <li>Para basemaps ArcGIS e serviços premium, informe a chave de API em <b>Administração › Integrações</b>. As camadas públicas do Living Atlas e o basemap OpenStreetMap dispensam chave.</li>
-      <li>Em produção, a chave deve vir de variável de ambiente e cofre de segredos, nunca do repositório.</li>
+      <li>Baixe este arquivo e abra-o diretamente no navegador, ou publique-o em um servidor — fora de um contêiner com política restritiva, o SDK e os basemaps carregam normalmente.</li>
+      <li>Libere <span class="mono">js.arcgis.com</span>, <span class="mono">services.arcgisonline.com</span> e <span class="mono">services.arcgis.com</span> na política de conteúdo e no proxy.</li>
+      <li>Nada precisa ser configurado além disso: não há chave, conta de desenvolvedor ou consumo de créditos em nenhum ponto da aplicação.</li>
     </ol>
     <div class="sec">Impacto no mockup</div>
     <table class="tbl"><thead><tr><th>Recurso</th><th>Contingência</th></tr></thead><tbody>
       <tr><td>Camadas temáticas e visibilidade</td><td><span class="tag g">Mantido</span></td></tr>
       <tr><td>Seleção, drill-down e sincronismo mapa ↔ tabela</td><td><span class="tag g">Mantido</span></td></tr>
       <tr><td>Navegação, destaque e pulsação de eventos críticos</td><td><span class="tag g">Mantido</span></td></tr>
-      <tr><td>Basemaps, clusterização e popups nativos</td><td><span class="tag y">Simplificado</span></td></tr>
+      <tr><td>Basemap de serviço aberto</td><td>${imgBlocked?'<span class="tag y">Base local</span>':'<span class="tag g">Mantido</span>'}</td></tr>
+      <tr><td>Clusterização e popups nativos do SDK</td><td><span class="tag y">Simplificado</span></td></tr>
       <tr><td>Living Atlas, Spatial Analyst e Network Analyst</td><td><span class="tag r">Indisponível</span></td></tr>
     </tbody></table>`,
     `<button class="btn" onclick="modalClose()">Fechar</button>
-     <button class="btn primary" onclick="modalClose();GEO.retry()">Tentar carregar novamente</button>`);
+     <button class="btn primary" onclick="modalClose();GEO.retry()">Tentar carregar novamente</button>`,'wide');
 }
 /* ============================================================
    SHELL — navegação, filtros globais, painéis e roteador
@@ -1826,7 +2011,7 @@ function viewTorre(){
     ${card('Projetos por missão','carteira filtrada',chBar(byMission,{h:170,showVal:true,cut:9}))}
     ${card('Radar de status das missões','execução, metas, risco e evidência',
       chRadar(['Execução','Metas','Investimento','Risco','Evidência','Prontidão'],
-        [{n:'Atual',c:'#176B9A',v:[68,74,62,45,58,71]},{n:'Alvo 2026',c:'#168A69',v:[85,88,80,70,82,86]}],{s:210}))}
+        [{n:'Atual',c:'#176B9A',v:[68,74,62,45,58,71]},{n:'Alvo 2026',c:'#168A69',v:[85,88,80,70,82,86]}],{s:250}))}
   </div>
 
   <div class="grid" style="grid-template-columns:1.35fr 1fr;margin-top:12px;align-items:start">
@@ -2168,7 +2353,7 @@ function viewEmpresas(){
       ${card('Score de capacidade industrial','média da seleção',
         chRadar(['Capacidade','Tecnologia','Certificação','Energia','Mão de obra','Logística'],
           [{n:'Seleção atual',c:'#176B9A',v:[Math.round(sum(C.map(c=>c.capScore))/(C.length||1)),62,71,58,66,54]},
-           {n:'Requerido pela cadeia',c:'#D96B32',v:[82,78,85,74,72,70]}],{s:206}))}
+           {n:'Requerido pela cadeia',c:'#D96B32',v:[82,78,85,74,72,70]}],{s:242}))}
       ${card('Qualidade e reconciliação cadastral','Entity Resolution + Data Quality Agent',
         `<div class="wrap" style="margin-bottom:8px">
           <span class="tag r">${C.filter(c=>c.dq==='dup').length} duplicidades</span>
@@ -2426,7 +2611,7 @@ function viewTerritorial(){
             <div class="sc">${t.score}</div></div>`).join('')}</div>`)}
       ${card('Comparação de alternativas','três melhores localidades',
         chRadar(['Energia','Água','Logística','Fornecedores','Trabalho','Ambiental'],
-          cmp.map((t,i)=>({n:t.uf,c:PAL[i],v:[t.energia,t.agua,t.logistica,t.fornec,t.mo,t.ambiental]})),{s:216}))}
+          cmp.map((t,i)=>({n:t.uf,c:PAL[i],v:[t.energia,t.agua,t.logistica,t.fornec,t.mo,t.ambiental]})),{s:250}))}
       ${card('Sensibilidade aos pesos','variação do score do 1º colocado',
         chTornado([{l:'Energia',lo:-9,hi:12},{l:'Logística',lo:-11,hi:8},{l:'Fornecedores',lo:-6,hi:7},{l:'Água',lo:-4,hi:5},{l:'ICTs',lo:-2,hi:3}],{h:130}))}
     </div>
@@ -3409,18 +3594,21 @@ function viewAdmin(){
         <td class="tiny">${esc(c[3])}</td><td class="mono tiny">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`,
       {tight:true})}
     <div class="grid">
-      ${card('ArcGIS — configuração','chave de API e serviços geoespaciais',
-        `<div class="fld"><label>Chave de API ArcGIS</label><input id="arcKey" type="password" placeholder="Opcional — basemap OSM funciona sem chave" value=""></div>
-        <div class="wrap" style="margin-top:8px"><button class="btn tech sm" id="btnKey">Aplicar chave</button><button class="btn sm" id="btnKeyClear">Remover</button></div>
-        <div class="notice" style="margin-top:10px"><div>A chave é mantida <b>apenas em memória nesta sessão</b> e nunca é gravada. Em produção, use variável de ambiente e cofre de segredos — nunca no repositório.</div></div>
-        <div class="sec">Serviços em uso</div>
+      ${card('ArcGIS — serviços abertos','nenhum recurso desta aplicação exige chave de API',
+        `<div class="notice" style="margin-bottom:10px"><div>A plataforma opera integralmente sobre <b>serviços públicos e gratuitos</b>: o SDK, os basemaps de <span class="mono">services.arcgisonline.com</span> e as camadas do Living Atlas em <span class="mono">services.arcgis.com</span>. Não há chave, conta de desenvolvedor nem consumo de créditos.</div></div>
         <dl class="kv">
           <dt>SDK</dt><dd>ArcGIS Maps SDK for JavaScript 4.31</dd>
           <dt>Estado</dt><dd>${GEO.mode==='arcgis'?'<span class="tag g">SDK ativo</span>':GEO.mode==='fallback'?'<span class="tag r">Contingência</span>':'<span class="tag y">Carregando</span>'} <button class="btn sm ghost" onclick="geoDiag()">diagnóstico</button></dd>
-          <dt>Basemap</dt><dd>${GEO.mode==='fallback'?'—':GEO.apiKey?'ArcGIS Light Gray':'OpenStreetMap (sem chave)'}</dd>
+          <dt>Basemap</dt><dd>${esc((GEO.BASEMAPS[GEO.basemapId]||{n:'—'}).n)}</dd>
           <dt>Living Atlas</dt><dd>Países do Mundo · Cidades do Mundo</dd>
           <dt>Camadas NIB</dt><dd>9 feature layers client-side</dd>
-        </dl>`)}
+          <dt>Autenticação</dt><dd><span class="tag g">Não requerida</span></dd>
+        </dl>
+        <div class="sec">Domínios que precisam estar liberados</div>
+        <div class="wrap">
+          <span class="cite">js.arcgis.com</span><span class="cite">services.arcgisonline.com</span>
+          <span class="cite">services.arcgis.com</span><span class="cite">tile.openstreetmap.org</span></div>
+        <div class="notice warn" style="margin-top:10px"><div>Caso, no futuro, algum serviço premium seja incorporado — geocodificação em lote, roteamento ou análises hospedadas — a credencial deve vir de variável de ambiente e cofre de segredos, nunca do repositório ou do código do cliente.</div></div>`)}
       ${card('Segurança e governança','perfis, trilha e regras',
         `<div class="tblwrap"><table class="tbl"><thead><tr><th>Perfil</th><th>Escopo</th><th>Decisão</th></tr></thead><tbody>
           <tr><td>Secretaria-Executiva</td><td class="tiny">Nacional · todas as missões</td><td><span class="tag g">Decide</span></td></tr>
@@ -3449,12 +3637,7 @@ function viewAdmin(){
 }
 function afterAdmin(){
   GEO.park();
-  $('#btnKey') && ($('#btnKey').onclick=()=>{
-    const k=$('#arcKey').value.trim();
-    if(!k){ toast('warn','Chave vazia','Informe uma chave de API ArcGIS válida ou continue com o basemap OpenStreetMap.'); return; }
-    GEO.setKey(k); toast('ok','Chave aplicada','Basemaps ArcGIS habilitados nesta sessão. A chave permanece apenas em memória.'); render();
-  });
-  $('#btnKeyClear') && ($('#btnKeyClear').onclick=()=>{ GEO.setKey(''); toast('info','Chave removida','Retornando ao basemap OpenStreetMap.'); render(); });
+
 }
 
 /* ============================================================
