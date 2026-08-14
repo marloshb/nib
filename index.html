@@ -1153,6 +1153,44 @@ const ARCGIS_ONLINE = 'https://services.arcgisonline.com/ArcGIS/rest/services/';
 const LIVING_ATLAS = 'https://services.arcgis.com/P3ePLMYs2RvChkJx/arcgis/rest/services/';
 
 const ESRI = { loaded:false, mods:null, views:[] };
+/* ============================================================
+   SIMBOLOGIA FIREFLY — ícones vetoriais embutidos (data URI),
+   com halo luminoso, sobre base cartográfica escura.
+   Cada objeto recebe uma forma que remete ao que representa.
+   ============================================================ */
+const FF = {
+  crit:'#FF4D5E', alto:'#FF9A3C', atencao:'#FFD84D', normal:'#4DD2FF',
+  ok:'#3DF0A8', proj:'#7CC5FF', terr:'#B98CFF', insp:'#5BE1C6', flow:'#66E0FF'
+};
+/* silhuetas em viewBox 64×64 */
+const ICON = {
+  fabrica:'M8 46V30l12 7V30l12 7V30l12 7V22h4v24H8zm6-4h8v-6h-8v6zm14 0h8v-6h-8v6zm14 0h6v-6h-6v6zM44 20l2-14h5l2 14h-9z',
+  planta:'M32 8l20 11v22L32 52 12 41V19L32 8zm0 6L18 22v16l14 8 14-8V22L32 14zm0 8l8 5v10l-8 5-8-5V27l8-5z',
+  alerta:'M32 8l26 46H6L32 8zm0 12L17 47h30L32 20zm-3 8h6v10h-6V28zm0 13h6v6h-6v-6z',
+  porto:'M30 10h4v6h6v4h-6v22c8-1 13-6 14-13h6c-1 13-10 21-22 22-12-1-21-9-22-22h6c1 7 6 12 14 13V20h-6v-4h6v-6zm2-6a5 5 0 110 10 5 5 0 010-10z',
+  energia:'M36 4L14 36h12l-4 24 22-32H32l4-24z',
+  ferrovia:'M20 6h6v52h-6V6zm18 0h6v52h-6V6zM10 18h44v5H10v-5zm0 14h44v5H10v-5zm0 14h44v5H10v-5z',
+  rodovia:'M28 6h8v10h-8V6zm0 16h8v12h-8V22zm0 18h8v18h-8V40zM12 6h6v52h-6V6zm34 0h6v52h-6V6z',
+  alvo:'M32 4a28 28 0 110 56 28 28 0 010-56zm0 8a20 20 0 100 40 20 20 0 000-40zm0 9a11 11 0 110 22 11 11 0 010-22zM32 0h3v10h-3zm0 54h3v10h-3zM0 30h10v3H0zm54 0h10v3H54z',
+  vistoria:'M22 6h20a4 4 0 014 4v2h4a4 4 0 014 4v40a4 4 0 01-4 4H14a4 4 0 01-4-4V16a4 4 0 014-4h4v-2a4 4 0 014-4zm2 6v4h16v-4H24zm-4 20l8 8 16-16-4-4-12 12-4-4-4 4z'
+};
+function ffSymbol(kind, color, size, opts){
+  const o=opts||{}, path=ICON[kind]||ICON.planta, blur=o.blur||3.6;
+  const svg =
+   `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="-16 -16 96 96">`
+   +`<defs>`
+   +`<filter id="g" x="-70%" y="-70%" width="240%" height="240%">`
+   +`<feGaussianBlur stdDeviation="${blur}" result="b"/>`
+   +`<feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
+   +`<radialGradient id="h"><stop offset="0%" stop-color="${color}" stop-opacity="${o.halo||.55}"/>`
+   +`<stop offset="100%" stop-color="${color}" stop-opacity="0"/></radialGradient></defs>`
+   +`<circle cx="32" cy="32" r="${o.r||30}" fill="url(#h)"/>`
+   +`<g filter="url(#g)"><path d="${path}" fill="${color}"/>`
+   +`<path d="${path}" fill="#FFFFFF" opacity="${o.core||.35}"/></g></svg>`;
+  return {type:'picture-marker', url:'data:image/svg+xml;base64,'+btoa(svg),
+          width:(size||18)+'px', height:(size||18)+'px'};
+}
+
 
 /** Resolve os módulos do SDK uma única vez (AMD, como no carregamento por CDN) */
 function esriReady(){
@@ -1176,20 +1214,20 @@ function destroyViews(){
 
 const GEO = {
   ready:false, mode:'loading', engine:'4.30 · AMD', view:null, map:null, layers:{}, mods:null,
-  slotId:null, basemapId:'gray', profileName:null, pulseTimer:null, failedSdk:false,
+  slotId:null, basemapId:'dark', profileName:null, pulseTimer:null, failedSdk:false,
 
   /* Basemaps abertos — serviços públicos, sem chave nem créditos */
   BASEMAPS:{
+    dark:{n:'Esri · World Dark Gray Canvas', base:ARCGIS_ONLINE+'Canvas/World_Dark_Gray_Base/MapServer',
+          ref:ARCGIS_ONLINE+'Canvas/World_Dark_Gray_Reference/MapServer'},
+    imagery:{n:'Esri · World Imagery', base:ARCGIS_ONLINE+'World_Imagery/MapServer',
+             ref:ARCGIS_ONLINE+'Reference/World_Boundaries_and_Places/MapServer'},
     gray:{n:'Esri · World Light Gray Canvas', base:ARCGIS_ONLINE+'Canvas/World_Light_Gray_Base/MapServer',
           ref:ARCGIS_ONLINE+'Canvas/World_Light_Gray_Reference/MapServer'},
     topo:{n:'Esri · World Topographic', base:ARCGIS_ONLINE+'World_Topo_Map/MapServer'},
     street:{n:'Esri · World Street Map', base:ARCGIS_ONLINE+'World_Street_Map/MapServer'},
-    imagery:{n:'Esri · World Imagery', base:ARCGIS_ONLINE+'World_Imagery/MapServer',
-             ref:ARCGIS_ONLINE+'Reference/World_Boundaries_and_Places/MapServer'},
     terrain:{n:'Esri · World Terrain', base:ARCGIS_ONLINE+'World_Terrain_Base/MapServer',
-             ref:ARCGIS_ONLINE+'Reference/World_Boundaries_and_Places/MapServer'},
-    dark:{n:'Esri · World Dark Gray Canvas', base:ARCGIS_ONLINE+'Canvas/World_Dark_Gray_Base/MapServer',
-          ref:ARCGIS_ONLINE+'Canvas/World_Dark_Gray_Reference/MapServer'}
+             ref:ARCGIS_ONLINE+'Reference/World_Boundaries_and_Places/MapServer'}
   },
   /* Serviços públicos do ArcGIS Living Atlas */
   LA:{
@@ -1218,6 +1256,7 @@ const GEO = {
     if(this.view && this.slotId===slotId && this.ready){ this.applyProfile(); return; }
     this.slotId=slotId;
     destroyViews(); this.view=null; this.map=null; this.layers={}; this.ready=false;
+    this.packets=[]; this.beacons=[]; this.stopAnim();
     if(this.pulseTimer){ clearInterval(this.pulseTimer); this.pulseTimer=null; }
 
     if(this.failedSdk){ this.showUnavailable(slot); return; }
@@ -1258,8 +1297,8 @@ const GEO = {
     this.layers=L;
     this.map=new M.Map({ basemap:this.basemapFrom(M,this.basemapId), layers:[
       L.la_hillshade, L.la_hydro, L.la_transport, L.la_boundaries,
-      L.flows, L.companies, L.infra, L.territories, L.projects, L.inspections, L.alerts,
-      L.highlight, L.pulse
+      L.flows, L.packets, L.companies, L.infra, L.territories, L.projects, L.inspections,
+      L.beacons, L.alerts, L.highlight, L.pulse
     ]});
     const view=new M.MapView({
       container:el, map:this.map,
@@ -1287,6 +1326,7 @@ const GEO = {
         }).catch(()=>{});
       });
       view.watch('center',()=>{ this.center=[view.center.longitude,view.center.latitude]; this.zoom=view.zoom; });
+      this.buildAnim(M);
       this.applyProfile();
       this.startPulse();
       bus.emit('geo:ready');
@@ -1313,13 +1353,12 @@ const GEO = {
         cadeia:CHAIN_BY[c.chain].name,cap:c.capScore,emp:c.emp,st:CHAIN_BY[c.chain].status}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'uf',type:'string'},
         {name:'cadeia',type:'string'},{name:'cap',type:'integer'},{name:'emp',type:'integer'},{name:'st',type:'string'}],
-      renderer:{type:'unique-value',field:'st',defaultSymbol:this.sym([23,107,154,.85],6),
+      renderer:{type:'unique-value',field:'st',defaultSymbol:ffSymbol('fabrica',FF.normal,17),
         uniqueValueInfos:[
-          {value:'crit',symbol:this.sym([197,61,69,.9],7)},{value:'alto',symbol:this.sym([217,107,50,.88],6.5)},
-          {value:'atencao',symbol:this.sym([213,169,50,.88],6)},{value:'normal',symbol:this.sym([23,107,154,.8],5.5)}]},
-      featureReduction:{type:'cluster',clusterRadius:'52px',clusterMinSize:'18px',clusterMaxSize:'40px',
-        labelingInfo:[{labelExpressionInfo:{expression:"Text($feature.cluster_count,'#,###')"},
-          symbol:{type:'text',color:'#ffffff',font:{weight:'bold',size:'10px'}},labelPlacement:'center-center'}]},
+          {value:'crit',symbol:ffSymbol('fabrica',FF.crit,22,{halo:.7,blur:4.2})},
+          {value:'alto',symbol:ffSymbol('fabrica',FF.alto,20,{halo:.62})},
+          {value:'atencao',symbol:ffSymbol('fabrica',FF.atencao,18)},
+          {value:'normal',symbol:ffSymbol('fabrica',FF.normal,16,{halo:.45})}]},
       popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Cadeia: {cadeia}<br>Score de capacidade: {cap}<br>Empregos: {emp}'}
     });
     L.projects = FL({
@@ -1328,8 +1367,8 @@ const GEO = {
         capex:Math.round(p.capex/1e6),prog:p.prog,risco:p.risk}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'uf',type:'string'},
         {name:'estagio',type:'string'},{name:'capex',type:'double'},{name:'prog',type:'integer'},{name:'risco',type:'string'}],
-      renderer:{type:'simple',symbol:{type:'simple-marker',style:'square',color:[20,52,91,.85],size:8,outline:{color:[255,255,255,.95],width:1}},
-        visualVariables:[{type:'size',field:'capex',stops:[{value:20,size:6},{value:800,size:14},{value:3000,size:22}]}]},
+      renderer:{type:'simple',symbol:ffSymbol('planta',FF.proj,20,{halo:.5}),
+        visualVariables:[{type:'size',field:'capex',stops:[{value:20,size:15},{value:800,size:24},{value:3000,size:34}]}]},
       popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Estágio: {estagio}<br>CAPEX: R$ {capex} mi<br>Execução física: {prog}%<br>Risco: {risco}'}
     });
     L.alerts = FL({
@@ -1337,12 +1376,12 @@ const GEO = {
       source: alerts.map((a,i)=> new M.Graphic(mkPoint(a,{oid:i+1,id:a.id,titulo:a.title,sev:a.sev,agente:a.agent,uf:a.uf}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'titulo',type:'string'},{name:'sev',type:'string'},
         {name:'agente',type:'string'},{name:'uf',type:'string'}],
-      renderer:{type:'unique-value',field:'sev',defaultSymbol:this.sym([90,107,128,.9],9),
+      renderer:{type:'unique-value',field:'sev',defaultSymbol:ffSymbol('alerta',FF.normal,18),
         uniqueValueInfos:[
-          {value:'crit',symbol:{type:'simple-marker',style:'triangle',color:[197,61,69,.95],size:13,outline:{color:[255,255,255,1],width:1.2}}},
-          {value:'alto',symbol:{type:'simple-marker',style:'triangle',color:[217,107,50,.95],size:11,outline:{color:[255,255,255,1],width:1.2}}},
-          {value:'atencao',symbol:{type:'simple-marker',style:'diamond',color:[213,169,50,.95],size:10,outline:{color:[255,255,255,1],width:1}}},
-          {value:'normal',symbol:{type:'simple-marker',style:'circle',color:[23,107,154,.9],size:8,outline:{color:[255,255,255,1],width:1}}}]},
+          {value:'crit',symbol:ffSymbol('alerta',FF.crit,26,{halo:.8,blur:4.6,core:.5})},
+          {value:'alto',symbol:ffSymbol('alerta',FF.alto,22,{halo:.68})},
+          {value:'atencao',symbol:ffSymbol('alerta',FF.atencao,19)},
+          {value:'normal',symbol:ffSymbol('alerta',FF.normal,16,{halo:.4})}]},
       popupTemplate:{title:'{titulo}',content:'<b>{id}</b> · {uf}<br>Severidade: {sev}<br>Detectado por: {agente}'}
     });
     L.infra = FL({
@@ -1350,12 +1389,12 @@ const GEO = {
       source: infra.map((f,i)=> new M.Graphic(mkPoint(f,{oid:i+1,id:f.id,nome:f.name,tipo:f.kind,nota:f.note,cap:f.cap}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'tipo',type:'string'},
         {name:'nota',type:'string'},{name:'cap',type:'integer'}],
-      renderer:{type:'unique-value',field:'tipo',defaultSymbol:this.sym([90,107,128,.9],8),
+      renderer:{type:'unique-value',field:'tipo',defaultSymbol:ffSymbol('planta',FF.flow,18),
         uniqueValueInfos:[
-          {value:'porto',symbol:{type:'simple-marker',style:'square',color:[14,90,130,.95],size:10,outline:{color:[255,255,255,1],width:1}}},
-          {value:'energia',symbol:{type:'simple-marker',style:'diamond',color:[213,169,50,.95],size:11,outline:{color:[255,255,255,1],width:1}}},
-          {value:'ferrovia',symbol:{type:'simple-marker',style:'cross',color:[62,87,114,1],size:11,outline:{color:[62,87,114,1],width:2}}},
-          {value:'rodovia',symbol:{type:'simple-marker',style:'x',color:[90,107,128,1],size:10,outline:{color:[90,107,128,1],width:2}}}]},
+          {value:'porto',symbol:ffSymbol('porto',FF.flow,22,{halo:.55})},
+          {value:'energia',symbol:ffSymbol('energia',FF.atencao,22,{halo:.6})},
+          {value:'ferrovia',symbol:ffSymbol('ferrovia',FF.ok,20,{halo:.5})},
+          {value:'rodovia',symbol:ffSymbol('rodovia',FF.normal,20,{halo:.5})}]},
       popupTemplate:{title:'{nome}',content:'Tipo: {tipo}<br>{nota}<br>Capacidade relativa: {cap}%'}
     });
     L.territories = FL({
@@ -1363,10 +1402,12 @@ const GEO = {
       source: territories.map((t,i)=> new M.Graphic(mkPoint(t,{oid:i+1,id:t.id,nome:t.name,uf:t.uf,score:t.score||0,cls:t.cls||'D'}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'nome',type:'string'},{name:'uf',type:'string'},
         {name:'score',type:'double'},{name:'cls',type:'string'}],
-      renderer:{type:'unique-value',field:'cls',defaultSymbol:this.sym([150,165,180,.8],9),
+      renderer:{type:'unique-value',field:'cls',defaultSymbol:ffSymbol('alvo','#8FA3B8',14,{halo:.3}),
         uniqueValueInfos:[
-          {value:'A',symbol:this.sym([22,138,105,.95],17)},{value:'B',symbol:this.sym([23,107,154,.9],13)},
-          {value:'C',symbol:this.sym([213,169,50,.9],10)},{value:'D',symbol:this.sym([150,165,180,.75],7)}]},
+          {value:'A',symbol:ffSymbol('alvo',FF.ok,30,{halo:.75,blur:4.4})},
+          {value:'B',symbol:ffSymbol('alvo',FF.normal,24,{halo:.6})},
+          {value:'C',symbol:ffSymbol('alvo',FF.atencao,19,{halo:.45})},
+          {value:'D',symbol:ffSymbol('alvo','#8FA3B8',15,{halo:.28})}]},
       popupTemplate:{title:'{nome}',content:'<b>{id}</b> · {uf}<br>Classe de favorabilidade: {cls}<br>Score multicritério: {score}'}
     });
     L.inspections = FL({
@@ -1374,12 +1415,12 @@ const GEO = {
       source: inspections.map((v,i)=> new M.Graphic(mkPoint(v,{oid:i+1,id:v.id,projeto:v.project,status:v.status,equipe:v.team,ev:v.evScore}))),
       fields:[{name:'oid',type:'oid'},{name:'id',type:'string'},{name:'projeto',type:'string'},{name:'status',type:'string'},
         {name:'equipe',type:'string'},{name:'ev',type:'double'}],
-      renderer:{type:'unique-value',field:'status',defaultSymbol:this.sym([110,79,191,.9],9),
+      renderer:{type:'unique-value',field:'status',defaultSymbol:ffSymbol('vistoria',FF.insp,18),
         uniqueValueInfos:[
-          {value:'Validada',symbol:{type:'simple-marker',style:'square',color:[22,138,105,.95],size:11,outline:{color:[255,255,255,1],width:1.4}}},
-          {value:'Concluída',symbol:{type:'simple-marker',style:'square',color:[23,107,154,.95],size:10,outline:{color:[255,255,255,1],width:1.4}}},
-          {value:'Em campo',symbol:{type:'simple-marker',style:'square',color:[213,169,50,.95],size:10,outline:{color:[255,255,255,1],width:1.4}}},
-          {value:'Programada',symbol:{type:'simple-marker',style:'square',color:[150,165,180,.9],size:9,outline:{color:[255,255,255,1],width:1.2}}}]},
+          {value:'Validada',symbol:ffSymbol('vistoria',FF.ok,22,{halo:.6})},
+          {value:'Concluída',symbol:ffSymbol('vistoria',FF.insp,20,{halo:.5})},
+          {value:'Em campo',symbol:ffSymbol('vistoria',FF.atencao,22,{halo:.65})},
+          {value:'Programada',symbol:ffSymbol('vistoria','#8FA3B8',17,{halo:.3})}]},
       popupTemplate:{title:'Vistoria {id}',content:'Projeto: {projeto}<br>Status: {status}<br>Equipe: {equipe}<br>Evidence score: {ev}'}
     });
 
@@ -1387,16 +1428,83 @@ const GEO = {
     trade.slice(0,10).forEach(t=> t.orig.forEach(o=>{
       L.flows.add(new M.Graphic({
         geometry:{type:'polyline',paths:[[[o.lng,o.lat],[(o.lng-47)/2,(o.lat-14)/2],[-47.9,-15.8]]]},
-        symbol:{type:'simple-line',color:o.share>60?[197,61,69,.75]:[23,107,154,.55],width:Math.max(1,o.share/22)},
+        symbol:{type:'simple-line',color:o.share>60?[255,77,94,.55]:[102,224,255,.42],width:Math.max(1.2,o.share/20)},
         attributes:{ncm:t.ncm,desc:t.desc,pais:o.name,share:o.share},
         popupTemplate:{title:'{desc}',content:'NCM {ncm}<br>Origem: {pais}<br>Participação: {share}%'}
       }));
     }));
+    L.packets = new M.GraphicsLayer({id:'packets', title:'Movimentação nos fluxos', visible:false});
+    L.beacons = new M.GraphicsLayer({id:'beacons', title:'Sinalização viva de eventos', visible:true});
     L.highlight = new M.GraphicsLayer({id:'highlight', title:'Seleção e cenários ativos'});
     L.pulse = new M.GraphicsLayer({id:'pulse', title:'Eventos críticos em tempo real'});
     return L;
   },
 
+
+  /* ---------------------------------------------------------
+     ANIMAÇÃO — a plataforma parece viva: pacotes percorrendo os
+     fluxos de importação e faróis pulsando sobre o que está em
+     operação, alerta crítico ou vistoria em campo.
+     --------------------------------------------------------- */
+  bez(a,b,c,n){
+    const p=[];
+    for(let i=0;i<=n;i++){ const t=i/n, u=1-t;
+      p.push([u*u*a[0]+2*u*t*b[0]+t*t*c[0], u*u*a[1]+2*u*t*b[1]+t*t*c[1]]); }
+    return p;
+  },
+  buildAnim(M){
+    const L=this.layers;
+    this.packets=[]; this.beacons=[];
+    trade.slice(0,10).forEach(t=> t.orig.forEach(o=>{
+      const pts=this.bez([o.lng,o.lat],[(o.lng-47)/2,(o.lat-14)/2],[-47.9,-15.8],90);
+      const hot=o.share>60, col=hot?[255,77,94]:[102,224,255];
+      const g=new M.Graphic({geometry:{type:'point',longitude:pts[0][0],latitude:pts[0][1]},
+        symbol:{type:'simple-marker',style:'circle',color:col.concat([.95]),size:hot?7:5.5,
+          outline:{color:col.concat([.35]),width:hot?4:3}}});
+      L.packets.add(g);
+      this.packets.push({g,pts,i:Math.floor(Math.random()*90)});
+    }));
+    const beacon=(o,col,base)=>{
+      const g=new M.Graphic({geometry:{type:'point',longitude:o.lng,latitude:o.lat},
+        symbol:{type:'simple-marker',style:'circle',color:[0,0,0,0],size:base,outline:{color:col.concat([.9]),width:1.6}}});
+      L.beacons.add(g);
+      this.beacons.push({g,col,base,ph:Math.random()*Math.PI*2});
+    };
+    alerts.filter(a=>a.open&&a.sev==='crit').slice(0,10).forEach(a=> beacon(a,[255,77,94],16));
+    alerts.filter(a=>a.open&&a.sev==='alto').slice(0,8).forEach(a=> beacon(a,[255,154,60],13));
+    inspections.filter(v=>v.status==='Em campo').forEach(v=> beacon(v,[255,216,77],13));
+    projects.filter(p=>p.stage==='Execução'&&p.prog>0).slice(0,14).forEach(p=> beacon(p,[124,197,255],12));
+    this.startAnim();
+  },
+  startAnim(){
+    if(this.animTimer) clearInterval(this.animTimer);
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let k=0;
+    this.animTimer=setInterval(()=>{
+      if(!this.ready||!this.view) return;
+      k++;
+      const L=this.layers;
+      if(L.packets && L.packets.visible){
+        this.packets.forEach(p=>{
+          p.i=(p.i+1)%p.pts.length;
+          const c=p.pts[p.i];
+          p.g.geometry={type:'point',longitude:c[0],latitude:c[1]};
+        });
+      }
+      if(L.beacons && L.beacons.visible){
+        this.beacons.forEach(b=>{
+          const t=(Math.sin(k/9+b.ph)+1)/2;                 // 0..1
+          try{
+            const s=b.g.symbol.clone();
+            s.size=b.base*(1+t*1.5);
+            s.outline={color:b.col.concat([.85*(1-t)+.12]),width:1.4+t*1.6};
+            b.g.symbol=s;
+          }catch(e){}
+        });
+      }
+    },90);
+  },
+  stopAnim(){ if(this.animTimer){ clearInterval(this.animTimer); this.animTimer=null; } },
   /* perfis de camada por módulo — a geografia se adapta ao contexto */
   PROFILES:{
     torre:      {companies:1,projects:1,alerts:1},
@@ -1413,13 +1521,16 @@ const GEO = {
   applyProfile(){
     const P=this.PROFILES[this.profileName]||{};
     Object.keys(this.layers).forEach(k=>{
-      if(k==='highlight'||k==='pulse') return;
+      if(k==='highlight'||k==='pulse'||k==='packets'||k==='beacons') return;
       this.layers[k].visible = !!P[k];
     });
+    if(this.layers.packets) this.layers.packets.visible = !!P.flows;
+    if(this.layers.beacons) this.layers.beacons.visible = !!(P.alerts||P.inspections||P.projects);
     bus.emit('geo:layers');
   },
 
   park(){ destroyViews(); this.view=null; this.ready=false; this.slotId=null;
+    this.packets=[]; this.beacons=[]; this.stopAnim();
     if(this.pulseTimer){ clearInterval(this.pulseTimer); this.pulseTimer=null; } },
   redraw(){},
 
@@ -1457,11 +1568,12 @@ const GEO = {
     if(!this.ready||!this.mods) return;
     const M=this.mods, lyr=this.layers.pulse; if(!lyr) return;
     const g=new M.Graphic({geometry:{type:'point',longitude:o.lng,latitude:o.lat},
-      symbol:{type:'simple-marker',style:'circle',color:[197,61,69,.28],size:8,outline:{color:[197,61,69,.9],width:2}}});
+      symbol:{type:'simple-marker',style:'circle',color:[255,77,94,.22],size:8,outline:{color:[255,77,94,.95],width:2.4}}});
     lyr.add(g); let s=8,up=true,n=0;
     const t=setInterval(()=>{
       s+=up?4:-4; if(s>34) up=false; if(s<8) up=true; n++;
-      try{ const sym=g.symbol.clone(); sym.size=s; sym.color=[197,61,69,Math.max(.05,.35-s/120)]; g.symbol=sym; }catch(e){}
+      try{ const sym=g.symbol.clone(); sym.size=s; sym.color=[255,77,94,Math.max(.04,.30-s/140)];
+        sym.outline={color:[255,77,94,Math.max(.1,1-s/40)],width:2.4}; g.symbol=sym; }catch(e){}
       if(n>60){ clearInterval(t); try{ lyr.remove(g); }catch(e){} }
     },70);
   },
@@ -1489,14 +1601,15 @@ function mapChrome(opts={}){
   <div class="map-overlay map-legend">
     <div class="eyebrow">Legenda operacional</div>
     ${(opts.legend||[
-      ['#C53D45','Crítico / dependência alta'],['#D96B32','Risco alto'],['#D5A932','Atenção'],
-      ['#176B9A','Normal / monitorado'],['#14345B','Projeto NIB','sq']
+      ['#FF4D5E','Planta em cadeia crítica'],['#FF9A3C','Risco alto'],['#FFD84D','Atenção'],
+      ['#4DD2FF','Monitorado'],['#7CC5FF','Projeto NIB'],['#3DF0A8','Território classe A'],
+      ['#66E0FF','Fluxo de importação','ln']
     ]).map(l=>`<div class="lg"><i class="${l[2]||''}" style="background:${l[0]}"></i>${l[1]}</div>`).join('')}
   </div>`;
 }
 function bindMapChrome(){
   const list=$('#layerList'); if(!list) return;
-  const order=['companies','projects','alerts','infra','territories','inspections','flows',
+  const order=['companies','projects','alerts','infra','territories','inspections','flows','packets','beacons',
                'la_hillshade','la_hydro','la_transport','la_boundaries'];
   if(!GEO.ready){ list.innerHTML=`<div class="lyr faint">Carregando serviço geoespacial…</div>`; return; }
   list.innerHTML = order.filter(k=>GEO.layers[k]).map(k=>{
@@ -2183,7 +2296,8 @@ function viewComercio(){
   <div class="grid" style="grid-template-columns:1.25fr 1fr;align-items:start">
     ${card('Mapa global de origem e destino','ArcGIS · fluxos de importação estratégica + Living Atlas',
       `<div class="map-slot" id="mapCom" style="height:400px">${mapChrome({chips:[`<span class="eyebrow">Fluxos</span><b>${T.length} NCMs</b>`],
-        legend:[['#C53D45','Origem concentrada >60%','ln'],['#176B9A','Fluxo monitorado','ln'],['#3E5772','Cidades · Living Atlas']]})}</div>`,
+        legend:[['#FF4D5E','Origem concentrada >60%','ln'],['#66E0FF','Fluxo monitorado','ln'],
+          ['#FF4D5E','Pacotes em movimento'],['#66E0FF','Porto e logística']]})}</div>`,
       {tight:true,right:`<button class="btn sm" id="btnWorld">Enquadrar mundo</button>`})}
     ${card('Pareto de dependência','concentração acumulada por produto',
       chPareto(top.map(t=>({l:t.desc.split(' ').slice(0,2).join(' '),v:t.value/1e6,c:t.score>70?'#C53D45':'#176B9A'})),{fmt:v=>'R$ '+v.toFixed(0)+' mi',h:200})
@@ -2290,7 +2404,8 @@ function viewTerritorial(){
       `<div class="map-slot" id="mapTerr" style="height:470px">${mapChrome({chips:[
         `<span class="eyebrow">Territórios</span><b>${territories.length}</b>`,
         `<span class="eyebrow">Classe A</span><b style="color:#168A69">${territories.filter(t=>t.cls==='A').length}</b>`],
-        legend:[['#168A69','Classe A — favorabilidade alta'],['#176B9A','Classe B'],['#D5A932','Classe C'],['#96A5B4','Classe D'],['#0E5A82','Infraestrutura','sq']]})}</div>`,
+        legend:[['#3DF0A8','Classe A — favorabilidade alta'],['#4DD2FF','Classe B'],['#FFD84D','Classe C'],
+          ['#8FA3B8','Classe D'],['#66E0FF','Infraestrutura habilitadora']]})}</div>`,
       {tight:true})}
 
     <div class="grid">
@@ -2784,7 +2899,8 @@ function viewCasos(){
   <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px;align-items:start">
     ${card('Mapa operacional','casos, projetos e vistorias georreferenciados',
       `<div class="map-slot" id="mapCasos" style="height:320px">${mapChrome({chips:[`<span class="eyebrow">Vistorias</span><b>${inspections.length}</b>`],
-        legend:[['#168A69','Vistoria validada','sq'],['#176B9A','Vistoria concluída','sq'],['#D5A932','Em campo','sq'],['#C53D45','Alerta crítico']]})}</div>`,{tight:true})}
+        legend:[['#3DF0A8','Vistoria validada'],['#5BE1C6','Vistoria concluída'],
+          ['#FFD84D','Equipe em campo — pulsando'],['#FF4D5E','Alerta crítico — pulsando']]})}</div>`,{tight:true})}
     ${card('Kanban de casos','fluxo alerta → caso → diligência → vistoria → despacho → decisão',
       `<div class="kan">${CASE_STAGES.map(s=>{
         const it=C.filter(c=>c.stage===s);
